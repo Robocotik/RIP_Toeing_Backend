@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 version: '3.7'
 
 # Settings and configurations that are common for all containers
@@ -76,3 +77,18 @@ volumes:
   data3-2:
   data4-1:
   data4-2:
+=======
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: admin12345
+    volumes:
+      - ./minio/data:/data
+    command: server /data --console-address ":9001"
+>>>>>>> d2a9f30 ([feat] minio: add docker-compose + upload rumbs in minio)

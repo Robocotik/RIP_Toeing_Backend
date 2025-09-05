@@ -43,6 +43,7 @@
             <div class='windContainer' id='windContainer'>
                 {{ range .rumbs }}
                 <a href="./rumb/{{ .ID }}" class='windCard'>
+                    <img class="windCard__img" src="http://localhost:9000/rumbs/{{ .Image }}" alt="image-{{ .ID }}">
                     <div class='windCard__hidden'>
                         <h2 class='windCard__title'>{{ .Title }}</h2>
                         <div class='circle windCard__white'>

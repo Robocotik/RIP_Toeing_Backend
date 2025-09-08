@@ -23,7 +23,7 @@ func StartServer() {
 
 	r.LoadHTMLGlob("templates/*")
 
-	r.Static("/static", "./resources")
+	r.Static("/resources", "./resources")
 
 	r.GET("/", handler.GetRumbs)
 	r.GET("/rumb/:id", handler.GetRumb)

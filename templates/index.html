@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/static/styles/globals.css">
-    <link rel="stylesheet" href="/static/styles/index.css">
+    <link rel="stylesheet" href="/resources/styles/globals.css">
+    <link rel="stylesheet" href="/resources/styles/index.css">
     <title>All rumbas</title>
 </head>
 
@@ -13,7 +13,9 @@
     <header class='header'>
         <div class='header__leftPart'>
             <a class='logo montez-regular' href="/">Toeing</a>
+        </div>
 
+        <div class='header__sub'>
             <form class='search__container' action="/" method="GET">
                 <button type='submit' title='search_button' class='circle search__circle'>
                     <svg class='search__circle__svg' width="20" height="20" viewBox="0 0 30 30" fill="none"
@@ -26,6 +28,11 @@
                 <input placeholder='Введите для поиска' title='query' type="text" name="query" id="query"
                     value="{{ .query }}" class='search__input' />
             </form>
+
+            <a href='./fly_request.html' class='header__cart__info'>
+                <p class='header__cart__title'>Заявка #1</p>
+                <p class='header__cart__count'>В корзине 2 услуги</p>
+            </a>
         </div>
 
         <!-- <nav>
@@ -42,16 +49,20 @@
                 длительности полета Boeing-737 между Лондоном и Парижем</h4>
             <div class='windContainer' id='windContainer'>
                 {{ range .rumbs }}
+                {{ if eq .ID 5 }}
+                <div></div>
+                {{ end }}
                 <a href="./rumb/{{ .ID }}" class='windCard'>
                     <img class="windCard__img" src="http://localhost:9000/rumbs/{{ .Image }}" alt="image-{{ .ID }}">
                     <div class='windCard__hidden'>
                         <h2 class='windCard__title'>{{ .Title }}</h2>
-                        <div class='circle windCard__white'>
-                            <svg width="27" height="34" viewBox="0 0 27 34" fill="none"
+                        <div class='windCard__white'>
+                            <svg width="27" height="34" viewBox="0 0 27 34" fill="none" class='windCard__white__svg'
                                 xmlns="http://www.w3.org/2000/svg">
                                 <path
                                     d="M0.811401 9.65C0.811401 6.70974 0.811401 5.23958 1.38278 4.11655C1.88539 3.12869 2.68735 2.32554 3.67374 1.82222C4.79514 1.25 6.26311 1.25 9.19905 1.25H16.8877C19.8237 1.25 21.2918 1.25 22.4131 1.82222C23.3994 2.32554 24.2015 3.12869 24.704 4.11655C25.2754 5.23958 25.2754 6.70974 25.2754 9.65V32.75L13.0434 25.7499L0.811401 32.75V9.65Z"
-                                    stroke="black" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                                    fill='white' stroke="white" stroke-width="1.5" stroke-linecap="round"
+                                    stroke-linejoin="round" />
                             </svg>
 
                         </div>

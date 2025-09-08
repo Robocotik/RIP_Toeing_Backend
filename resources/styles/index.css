@@ -6,7 +6,7 @@
   margin-top: 2rem;
 }
 
-.windCard__img{
+.windCard__img {
   object-fit: contain;
   position: absolute;
   top: 50%;
@@ -20,15 +20,15 @@
   margin-top: 2rem;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 3rem;
+  width: 100%;
+  justify-content: space-between;
+  row-gap: 2rem;
 }
 
-.windCard__white {
-  background-color: var(--color-white-main);
-}
 
 .windCard {
-  width: 20rem;
+  margin-inline: auto;
+  width: 16rem;
   height: 14rem;
   border-radius: 1rem;
   display: flex;
@@ -39,6 +39,37 @@
   gap: 1rem;
   box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
   position: relative;
+  text-decoration: none;
+  transition: transform 0.3s;
+  overflow: hidden; /* важно для затемнения */
+
+  /* Затемнение через ::after */
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.4), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 0;
+  }
+
+  &:hover {
+    transform: scale(1.05);
+
+    &::after {
+      opacity: 1;
+    }
+
+    .windCard__hidden {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+.windCard__title {
+  color: var(--color-white-main);
 }
 
 .main__title {
@@ -61,6 +92,17 @@
   justify-content: space-between;
   align-items: center;
   margin-top: auto;
+
+  opacity: 0;
+  transform: translateY(100%);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.windCard__white__svg{
+  outline: none;
+  border: none;
 }
 
 footer {

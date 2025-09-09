@@ -55,3 +55,14 @@ func (r *Repository) GetRumbsByTitle(title string) ([]mock.Rumb, error) {
 
 	return result, nil
 }
+
+func (r *Repository) GetFlyRequest() (mock.Rumb, error) {
+	rumbs := mock.Rumbs
+	// обязательно проверяем ошибки, и если они появились - передаем выше, то есть хендлеру
+	// тут я снова искусственно обработаю "ошибку" чисто чтобы показать вам как их передавать выше
+	// if len(rumbs) == 0 {
+	// 	return nil, fmt.Errorf("массив пустой")
+	// }
+
+	return rumbs[0], nil
+}

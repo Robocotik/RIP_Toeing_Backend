@@ -38,8 +38,8 @@ func (h *Handler) GetRumbs(ctx *gin.Context) {
 	}
 
 	ctx.HTML(http.StatusOK, "index.html", gin.H{
-		"rumbs":  rumbs,
-		"query":  searchQuery, // передаем введенный запрос обратно на страницу
+		"rumbs": rumbs,
+		"query": searchQuery, // передаем введенный запрос обратно на страницу
 		// в ином случае оно будет очищаться при нажатии на кнопку
 	})
 }
@@ -60,4 +60,13 @@ func (h *Handler) GetRumb(ctx *gin.Context) {
 	ctx.HTML(http.StatusOK, "rumb.html", gin.H{
 		"rumb": rumb,
 	})
+}
+
+func (h *Handler) GetFlyRequest(ctx *gin.Context) {
+	_, err := h.Repository.GetFlyRequest()
+	if err != nil {
+		logrus.Error(err)
+	}
+
+	ctx.HTML(http.StatusOK, "fly_calculation.html", gin.H{})
 }

@@ -27,6 +27,7 @@ func StartServer() {
 
 	r.GET("/", handler.GetRumbs)
 	r.GET("/rumb/:id", handler.GetRumb)
+	r.GET("/fly_calculation.html", handler.GetFlyRequest)
 
 	r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 	log.Println("Server down")

@@ -104,18 +104,3 @@
   outline: none;
   border: none;
 }
-
-footer {
-  margin-top: auto;
-}
-.footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.footer__socials {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-}

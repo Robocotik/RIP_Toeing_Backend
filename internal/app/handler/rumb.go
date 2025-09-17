@@ -2,6 +2,7 @@ package handler
 
 import (
 	"backend/internal/app/ds"
+	"backend/internal/app/repository"
 	"net/http"
 	"strconv"
 
@@ -26,9 +27,20 @@ func (h *Handler) GetRumbs(ctx *gin.Context) {
 		}
 	}
 
+	requestInfo, err := h.Repository.GetCurrentRequestInfo(1)
+	if err != nil {
+		logrus.Error("Failed to get current request info:", err)
+		requestInfo = repository.CurrentRequestInfo{
+			RequestID: 1,
+			RumbCount: 0,
+		}
+	}
+
 	ctx.HTML(http.StatusOK, "index.html", gin.H{
 		"rumbs": rumbs,
 		"query": searchQuery, // передаем введенный запрос обратно на страницу
+		"request_id": requestInfo.RequestID,
+		"rumb_count": requestInfo.RumbCount,
 		// в ином случае оно будет очищаться при нажатии на кнопку
 	})
 }
@@ -48,23 +60,5 @@ func (h *Handler) GetRumb(ctx *gin.Context) {
 
 	ctx.HTML(http.StatusOK, "rumb.html", gin.H{
 		"rumb": rumb,
-	})
-}
-
-func (h *Handler) GetFlyRequest(ctx *gin.Context) {
-	idStr := ctx.Param("id") // получаем id заказа из урла (то есть из /order/:id)
-	// через двоеточие мы указываем параметры, которые потом сможем считать через функцию выше
-	_, err := strconv.Atoi(idStr) // так как функция выше возвращает нам строку, нужно ее преобразовать в int
-	if err != nil {
-		logrus.Error(err)
-	}
-
-	fly_request, err := h.Repository.GetFlyRequest()
-	if err != nil {
-		logrus.Error(err)
-	}
-
-	ctx.HTML(http.StatusOK, "fly_calculation.html", gin.H{
-		"request": fly_request,
 	})
 }

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"backend/internal/app/ds"
+	"backend/internal/app/repository"
 	"net/http"
 	"strconv"
 
@@ -27,7 +28,7 @@ func (h *Handler) AddToRequest(ctx *gin.Context) {
 	}
 
 	var flyRequest ds.FlyRequest
-	
+
 	// Ищем существующую заявку со статусом "created"
 	flyRequest, err = h.Repository.GetFlyRequestByStatus("created")
 	if err != nil {
@@ -43,7 +44,7 @@ func (h *Handler) AddToRequest(ctx *gin.Context) {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request"})
 			return
 		}
-		flyRequest = *newFlyRequest // Используем созданную заявку с заполненным ID
+		flyRequest = *newFlyRequest
 	}
 
 	// Получаем текущий максимальный segment_order для этой заявки
@@ -54,14 +55,14 @@ func (h *Handler) AddToRequest(ctx *gin.Context) {
 		return
 	}
 
-	// Создаем связь между FlyRequest и Rumb
+	// Создаем связь между FlyRequest и Rumb используя существующую структуру
 	flyRequestRumb := ds.FlyRequest_Rumb{
 		FlyRequestID: uint(flyRequest.ID),
 		RumbID:       uint(rumbID),
 		SegmentOrder: maxSegmentOrder + 1,
-		DistanceKM:   100.0,    // Примерное значение, нужно получить из данных
-		WindSpeedKMH: 50.0,     // Примерное значение, нужно получить из данных
-		IsMain:       false,    // или true в зависимости от логики
+		DistanceKM:   100.0,
+		WindSpeedKMH: 50.0,
+		IsMain:       false,
 	}
 
 	err = h.Repository.CreateFlyRequestRumb(flyRequestRumb)
@@ -72,4 +73,33 @@ func (h *Handler) AddToRequest(ctx *gin.Context) {
 	}
 
 	ctx.Redirect(http.StatusFound, "/")
+}
+
+func (h *Handler) GetFlyRequest(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	_, err := strconv.Atoi(idStr)
+	if err != nil {
+		logrus.Error(err)
+	}
+
+	fly_request, err := h.Repository.GetFlyRequest()
+	if err != nil {
+		logrus.Error(err)
+	}
+
+	// Получаем информацию о текущей заявке
+	requestInfo, err := h.Repository.GetCurrentRequestInfo(1)
+	if err != nil {
+		logrus.Error("Failed to get current request info:", err)
+		requestInfo = repository.CurrentRequestInfo{
+			RequestID: 1,
+			RumbCount: 0,
+		}
+	}
+
+	ctx.HTML(http.StatusOK, "fly_calculation.html", gin.H{
+		"request":    fly_request,
+		"request_id": requestInfo.RequestID,
+		"rumb_count": requestInfo.RumbCount,
+	})
 }

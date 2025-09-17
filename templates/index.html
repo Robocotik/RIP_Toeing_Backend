@@ -30,8 +30,8 @@
             </form>
 
             <a href='./fly_calculation' class='header__cart__info'>
-                <p class='header__cart__title'>Заявка #1</p>
-                <p class='header__cart__count'>В корзине 2 услуги</p>
+                <p class='header__cart__title'>Заявка #{{ .request_id }}</p>
+                <p class='header__cart__count'>В корзине {{ .rumb_count }} услуги</p>
             </a>
         </div>
 

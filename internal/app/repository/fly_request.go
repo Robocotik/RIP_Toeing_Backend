@@ -41,3 +41,28 @@ func (r *Repository) CreateFlyRequestRumb(flyRequestRumb ds.FlyRequest_Rumb) err
 	}
 	return nil
 }
+
+// GetCurrentRequestInfo возвращает информацию о текущей заявке пользователя
+type CurrentRequestInfo struct {
+	RequestID int `json:"request_id"`
+	RumbCount int `json:"rumb_count"`
+}
+
+func (r *Repository) GetCurrentRequestInfo(userID int) (CurrentRequestInfo, error) {
+	var info CurrentRequestInfo
+	
+	err := r.db.Table("fly_requests fr").
+		Select("fr.id as request_id, COUNT(frr.rumb_id) as rumb_count").
+		Joins("LEFT JOIN fly_request_rumbs frr ON fr.id = frr.fly_request_id").
+		Where("fr.status = ? AND fr.created_by_id = ?", "created", userID).
+		Group("fr.id").
+		Order("fr.id DESC").
+		Limit(1).
+		Scan(&info).Error
+	
+	if err != nil {
+		return CurrentRequestInfo{}, fmt.Errorf("failed to get current request info: %v", err)
+	}
+	
+	return info, nil
+}

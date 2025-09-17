@@ -25,7 +25,6 @@
   row-gap: 2rem;
 }
 
-
 .windCard {
   margin-inline: auto;
   width: 16rem;
@@ -100,7 +99,20 @@
   z-index: 1;
 }
 
-.windCard__white__svg{
+.windCard__white__svg {
   outline: none;
   border: none;
+  background: transparent;
+}
+
+.windCard__hidden_rightPart {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.form{
+  outline: none;
+  border: none;
+  background: transparent;
 }

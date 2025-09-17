@@ -1,8 +1,7 @@
 package handler
 
 import (
-	"backend/internal/repository"
-	"backend/mock"
+	"backend/internal/app/ds"
 	"net/http"
 	"strconv"
 
@@ -10,18 +9,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type Handler struct {
-	Repository *repository.Repository
-}
-
-func NewHandler(r *repository.Repository) *Handler {
-	return &Handler{
-		Repository: r,
-	}
-}
-
 func (h *Handler) GetRumbs(ctx *gin.Context) {
-	var rumbs []mock.Rumb
+	var rumbs []ds.Rumb
 	var err error
 
 	searchQuery := ctx.Query("query") // получаем значение из поля поиска
@@ -63,10 +52,19 @@ func (h *Handler) GetRumb(ctx *gin.Context) {
 }
 
 func (h *Handler) GetFlyRequest(ctx *gin.Context) {
-	_, err := h.Repository.GetFlyRequest()
+	idStr := ctx.Param("id") // получаем id заказа из урла (то есть из /order/:id)
+	// через двоеточие мы указываем параметры, которые потом сможем считать через функцию выше
+	_, err := strconv.Atoi(idStr) // так как функция выше возвращает нам строку, нужно ее преобразовать в int
 	if err != nil {
 		logrus.Error(err)
 	}
 
-	ctx.HTML(http.StatusOK, "fly_calculation.html", gin.H{})
+	fly_request, err := h.Repository.GetFlyRequest()
+	if err != nil {
+		logrus.Error(err)
+	}
+
+	ctx.HTML(http.StatusOK, "fly_calculation.html", gin.H{
+		"request": fly_request,
+	})
 }

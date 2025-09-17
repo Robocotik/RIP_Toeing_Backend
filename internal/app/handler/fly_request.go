@@ -97,9 +97,45 @@ func (h *Handler) GetFlyRequest(ctx *gin.Context) {
 		}
 	}
 
+	rumbs, err := h.Repository.GetRumbsByFlyRequestID(requestInfo.RequestID)
+	
+	if err != nil {
+		logrus.Error("Failed to get rumbs from request: ", err)
+	}
+
 	ctx.HTML(http.StatusOK, "fly_calculation.html", gin.H{
 		"request":    fly_request,
+		"rumbs":      rumbs,
 		"request_id": requestInfo.RequestID,
 		"rumb_count": requestInfo.RumbCount,
 	})
+}
+
+func (h *Handler) DeleteFlyRequest(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	flyRequestID, err := strconv.Atoi(idStr)
+	if err != nil {
+		logrus.Error("Invalid ID parameter:", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		return
+	}
+
+	// Проверяем существование заявки
+	_, err = h.Repository.GetFlyRequestByID(flyRequestID)
+	if err != nil {
+		logrus.Error("FlyRequest not found:", err)
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "FlyRequest not found"})
+		return
+	}
+
+	// Обновляем статус заявки на "deleted"
+	err = h.Repository.UpdateFlyRequestStatus(flyRequestID, "deleted")
+	if err != nil {
+		logrus.Error("Failed to update fly request status:", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete request"})
+		return
+	}
+
+	// Перенаправляем на главную страницу или возвращаем успешный ответ
+	ctx.Redirect(http.StatusFound, "/")
 }

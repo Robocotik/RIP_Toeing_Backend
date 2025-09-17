@@ -50,7 +50,7 @@ type CurrentRequestInfo struct {
 
 func (r *Repository) GetCurrentRequestInfo(userID int) (CurrentRequestInfo, error) {
 	var info CurrentRequestInfo
-	
+
 	err := r.db.Table("fly_requests fr").
 		Select("fr.id as request_id, COUNT(frr.rumb_id) as rumb_count").
 		Joins("LEFT JOIN fly_request_rumbs frr ON fr.id = frr.fly_request_id").
@@ -59,10 +59,40 @@ func (r *Repository) GetCurrentRequestInfo(userID int) (CurrentRequestInfo, erro
 		Order("fr.id DESC").
 		Limit(1).
 		Scan(&info).Error
-	
+
 	if err != nil {
 		return CurrentRequestInfo{}, fmt.Errorf("failed to get current request info: %v", err)
 	}
-	
+
 	return info, nil
+}
+
+func (r *Repository) GetFlyRequestByID(id int) (ds.FlyRequest, error) {
+	var flyRequest ds.FlyRequest
+	err := r.db.First(&flyRequest, id).Error
+	if err != nil {
+		return ds.FlyRequest{}, fmt.Errorf("failed to get fly request by ID: %v", err)
+	}
+	return flyRequest, nil
+}
+
+// UpdateFlyRequestStatus обновляет статус заявки
+func (r *Repository) UpdateFlyRequestStatus(id int, status string) error {
+	err := r.db.Model(&ds.FlyRequest{}).
+		Where("id = ?", id).
+		Update("status", status).Error
+	if err != nil {
+		return fmt.Errorf("failed to update fly request status: %v", err)
+	}
+	return nil
+}
+
+// GetAllFlyRequests возвращает все заявки (опционально)
+func (r *Repository) GetAllFlyRequests() ([]ds.FlyRequest, error) {
+	var flyRequests []ds.FlyRequest
+	err := r.db.Find(&flyRequests).Error
+	if err != nil {
+		return nil, fmt.Errorf("failed to get all fly requests: %v", err)
+	}
+	return flyRequests, nil
 }

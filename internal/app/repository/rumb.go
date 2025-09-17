@@ -46,3 +46,21 @@ func (r *Repository) GetFlyRequest() (mock.Rumb, error) {
 	rumbs := mock.Rumbs
 	return rumbs[0], nil
 }
+
+// GetRumbsByFlyRequestID возвращает все румбы для указанной заявки
+func (r *Repository) GetRumbsByFlyRequestID(flyRequestID int) ([]ds.Rumb, error) {
+	var rumbs []ds.Rumb
+	
+	err := r.db.Table("rumbs r").
+		Select("r.id, r.title, r.image").
+		Joins("INNER JOIN fly_request_rumbs frr ON r.id = frr.rumb_id").
+		Where("frr.fly_request_id = ?", flyRequestID).
+		Order("frr.segment_order ASC").
+		Scan(&rumbs).Error
+	
+	if err != nil {
+		return nil, fmt.Errorf("failed to get rumbs by fly request ID: %v", err)
+	}
+	fmt.Print("из бд я вернул ", )
+	return rumbs, nil
+}

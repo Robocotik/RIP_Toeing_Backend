@@ -62,3 +62,29 @@ func (h *Handler) GetRumb(ctx *gin.Context) {
 		"rumb": rumb,
 	})
 }
+
+
+// GetRumbsByFlyRequestIDFull - метод для получения полных данных румб по ID заявки
+func (h *Handler) GetRumbsByFlyRequestIDFull(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	flyRequestID, err := strconv.Atoi(idStr)
+	if err != nil {
+		logrus.Error("Invalid ID parameter:", err)
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		return
+	}
+
+	// Получаем румбы для указанной заявки
+	rumbs, err := h.Repository.GetRumbsByFlyRequestID(flyRequestID)
+	if err != nil {
+		logrus.Error("Failed to get rumbs for fly request:", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get rumbs"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"fly_request_id": flyRequestID,
+		"rumbs":          rumbs,
+		"count":          len(rumbs),
+	})
+}

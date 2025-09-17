@@ -91,3 +91,18 @@
     margin-top: 4rem;
     margin-bottom: 3rem;   
 }
+
+.deleteForm{
+  width: fit-content;
+  height: fit-content;
+  margin-top: 3rem;
+}
+
+.deleteBtn{
+  background-color: red;
+  color: white;
+  border-radius: 1rem;
+  padding: 1rem 2rem;
+  cursor: pointer;
+
+}

@@ -42,7 +42,6 @@ func (r *Repository) CreateFlyRequestRumb(flyRequestRumb ds.FlyRequest_Rumb) err
 	return nil
 }
 
-// GetCurrentRequestInfo возвращает информацию о текущей заявке пользователя
 type CurrentRequestInfo struct {
 	RequestID int `json:"request_id"`
 	RumbCount int `json:"rumb_count"`
@@ -76,7 +75,7 @@ func (r *Repository) GetFlyRequestByID(id int) (ds.FlyRequest, error) {
 	return flyRequest, nil
 }
 
-// UpdateFlyRequestStatus обновляет статус заявки
+
 func (r *Repository) UpdateFlyRequestStatus(id int, status string) error {
 	err := r.db.Model(&ds.FlyRequest{}).
 		Where("id = ?", id).
@@ -87,7 +86,7 @@ func (r *Repository) UpdateFlyRequestStatus(id int, status string) error {
 	return nil
 }
 
-// GetAllFlyRequests возвращает все заявки (опционально)
+
 func (r *Repository) GetAllFlyRequests() ([]ds.FlyRequest, error) {
 	var flyRequests []ds.FlyRequest
 	err := r.db.Find(&flyRequests).Error

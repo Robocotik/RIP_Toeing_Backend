@@ -14,14 +14,14 @@ func (h *Handler) GetRumbs(ctx *gin.Context) {
 	var rumbs []ds.Rumb
 	var err error
 
-	searchQuery := ctx.Query("query") // получаем значение из поля поиска
-	if searchQuery == "" {            // если поле поиска пусто, то просто получаем из репозитория все записи
+	searchQuery := ctx.Query("query")
+	if searchQuery == "" {           
 		rumbs, err = h.Repository.GetRumbs()
 		if err != nil {
 			logrus.Error(err)
 		}
 	} else {
-		rumbs, err = h.Repository.GetRumbsByTitle(searchQuery) // в ином случае ищем заказ по заголовку
+		rumbs, err = h.Repository.GetRumbsByTitle(searchQuery)
 		if err != nil {
 			logrus.Error(err)
 		}
@@ -38,10 +38,10 @@ func (h *Handler) GetRumbs(ctx *gin.Context) {
 
 	ctx.HTML(http.StatusOK, "index.html", gin.H{
 		"rumbs": rumbs,
-		"query": searchQuery, // передаем введенный запрос обратно на страницу
+		"query": searchQuery, 
 		"request_id": requestInfo.RequestID,
 		"rumb_count": requestInfo.RumbCount,
-		// в ином случае оно будет очищаться при нажатии на кнопку
+		
 	})
 }
 

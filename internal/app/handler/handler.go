@@ -20,9 +20,9 @@ func NewHandler(r *repository.Repository) *Handler {
 func (h *Handler) RegisterHandler(router *gin.Engine) {
 	router.GET("/", h.GetRumbs)
 	router.GET("/rumb/:id", h.GetRumb)
-	router.GET("/fly_calculation", h.GetFlyRequest)
 	router.GET("/addToRequest/:id", h.AddToRequest)
 	router.GET("/deleteRequest/:id", h.DeleteFlyRequest)
+	router.GET("/fly_calculation/:id", h.GetFlyRequest)
 }
 
 func (h *Handler) RegisterStatic(router *gin.Engine) {

@@ -19,7 +19,7 @@ func (h *Handler) AddToRequest(ctx *gin.Context) {
 		return
 	}
 
-	// Проверяем существование румба
+
 	_, err = h.Repository.GetRumb(rumbID)
 	if err != nil {
 		logrus.Error("Rumb not found:", err)
@@ -29,10 +29,10 @@ func (h *Handler) AddToRequest(ctx *gin.Context) {
 
 	var flyRequest ds.FlyRequest
 
-	// Ищем существующую заявку со статусом "created"
+	
 	flyRequest, err = h.Repository.GetFlyRequestByStatus("created")
 	if err != nil {
-		// Если нет заявки со статусом "created", создаем новую
+		
 		newFlyRequest := &ds.FlyRequest{
 			Status:      "created",
 			CreatedByID: 1,
@@ -47,7 +47,7 @@ func (h *Handler) AddToRequest(ctx *gin.Context) {
 		flyRequest = *newFlyRequest
 	}
 
-	// Получаем текущий максимальный segment_order для этой заявки
+	
 	maxSegmentOrder, err := h.Repository.GetMaxSegmentOrder(flyRequest.ID)
 	if err != nil {
 		logrus.Error("Failed to get max segment order:", err)
@@ -55,7 +55,7 @@ func (h *Handler) AddToRequest(ctx *gin.Context) {
 		return
 	}
 
-	// Создаем связь между FlyRequest и Rumb используя существующую структуру
+	
 	flyRequestRumb := ds.FlyRequest_Rumb{
 		FlyRequestID: uint(flyRequest.ID),
 		RumbID:       uint(rumbID),
@@ -87,7 +87,7 @@ func (h *Handler) GetFlyRequest(ctx *gin.Context) {
 		logrus.Error(err)
 	}
 
-	// Получаем информацию о текущей заявке
+	
 	requestInfo, err := h.Repository.GetCurrentRequestInfo(1)
 	if err != nil {
 		logrus.Error("Failed to get current request info:", err)
@@ -120,7 +120,7 @@ func (h *Handler) DeleteFlyRequest(ctx *gin.Context) {
 		return
 	}
 
-	// Проверяем существование заявки
+	
 	_, err = h.Repository.GetFlyRequestByID(flyRequestID)
 	if err != nil {
 		logrus.Error("FlyRequest not found:", err)
@@ -128,7 +128,7 @@ func (h *Handler) DeleteFlyRequest(ctx *gin.Context) {
 		return
 	}
 
-	// Обновляем статус заявки на "deleted"
+	
 	err = h.Repository.UpdateFlyRequestStatus(flyRequestID, "deleted")
 	if err != nil {
 		logrus.Error("Failed to update fly request status:", err)
@@ -136,6 +136,5 @@ func (h *Handler) DeleteFlyRequest(ctx *gin.Context) {
 		return
 	}
 
-	// Перенаправляем на главную страницу или возвращаем успешный ответ
 	ctx.Redirect(http.StatusFound, "/")
 }

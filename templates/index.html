@@ -29,7 +29,7 @@
                     value="{{ .query }}" class='search__input' />
             </form>
 
-            <a href='./fly_calculation' class='header__cart__info'>
+            <a href='./fly_calculation/{{ .request_id }}' class='header__cart__info'>
                 <p class='header__cart__title'>Заявка #{{ .request_id }}</p>
                 <p class='header__cart__count'>В корзине {{ .rumb_count }} услуги</p>
             </a>

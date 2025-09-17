@@ -106,3 +106,8 @@
   cursor: pointer;
 
 }
+
+.main__card__img{
+  width: 10rem;
+  height: 10rem;
+}

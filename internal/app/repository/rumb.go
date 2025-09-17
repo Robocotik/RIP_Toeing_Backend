@@ -7,12 +7,8 @@ import (
 )
 
 func (r *Repository) GetRumbs() ([]ds.Rumb, error) {
-	// имитируем работу с БД. Типа мы выполнили sql запрос и получили эти строки из БД
 	var rumbs []ds.Rumb
 	err := r.db.Find(&rumbs).Error
-
-	// обязательно проверяем ошибки, и если они появились - передаем выше, то есть хендлеру
-	// тут я снова искусственно обработаю "ошибку" чисто чтобы показать вам как их передавать выше
 	if err != nil {
 		return nil, err
 	}
@@ -24,7 +20,6 @@ func (r *Repository) GetRumbs() ([]ds.Rumb, error) {
 }
 
 func (r *Repository) GetRumb(id int) (ds.Rumb, error) {
-	// тут у вас будет логика получения нужной услуги, тоже наверное через цикл в первой лабе, и через запрос к БД начиная со второй
 	rumb := ds.Rumb{}
 	err := r.db.Where("id = ?", id).First(&rumb).Error
 	if err != nil {
@@ -47,7 +42,6 @@ func (r *Repository) GetFlyRequest() (mock.Rumb, error) {
 	return rumbs[0], nil
 }
 
-// GetRumbsByFlyRequestID возвращает все румбы для указанной заявки
 func (r *Repository) GetRumbsByFlyRequestID(flyRequestID int) ([]ds.Rumb, error) {
 	var rumbs []ds.Rumb
 	

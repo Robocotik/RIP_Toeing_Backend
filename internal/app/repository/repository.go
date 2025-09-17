@@ -15,7 +15,6 @@ func NewRepository(dsn string) (*Repository, error) {
 		return nil, err
 	}
 
-	// Возвращаем объект Repository с подключенной базой данных
 	return &Repository{
 		db: db,
 	}, nil

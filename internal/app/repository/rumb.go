@@ -2,7 +2,7 @@ package repository
 
 import (
 	"backend/internal/app/ds"
-	"fmt"
+	// "fmt"
 )
 
 func (r *Repository) GetRumbs() ([]ds.Rumb, error) {
@@ -37,19 +37,30 @@ func (r *Repository) DeleteRumb(id int) error {
 }
 
 
-func (r *Repository) GetRumbsByFlyRequestID(flyRequestID int) ([]ds.Rumb, error) {
-	var rumbs []ds.Rumb
+// func (r *Repository) GetRumbsByFlyRequestID(flyRequestID int) ([]ds.Rumb, error) {
+// 	var rumbs []ds.Rumb
 	
-	err := r.db.Table("rumbs r").
-		Select("r.id, r.title, r.image").
-		Joins("INNER JOIN fly_request_rumbs frr ON r.id = frr.rumb_id").
-		Where("frr.fly_request_id = ?", flyRequestID).
-		Order("frr.segment_order ASC").
-		Scan(&rumbs).Error
+// 	err := r.db.Table("rumbs r").
+// 		Select("r.id, r.title, r.image").
+// 		Joins("INNER JOIN fly_request_rumbs frr ON r.id = frr.rumb_id").
+// 		Where("frr.fly_request_id = ?", flyRequestID).
+// 		Order("frr.segment_order ASC").
+// 		Scan(&rumbs).Error
 	
-	if err != nil {
-		return nil, fmt.Errorf("failed to get rumbs by fly request ID: %v", err)
-	}
-	// fmt.Print("из бд я вернул ", rumbs)
-	return rumbs, nil
+// 	if err != nil {
+// 		return nil, fmt.Errorf("failed to get rumbs by fly request ID: %v", err)
+// 	}
+// 	// fmt.Print("из бд я вернул ", rumbs)
+// 	return rumbs, nil
+// }
+
+
+// Получаем все румбы для заявки с информацией о румбе
+func (r *Repository) GetRumbsByFlyRequestID(flyRequestID int) ([]ds.FlyRequest_Rumb, error) {
+	var rumbs []ds.FlyRequest_Rumb
+	err := r.db.
+		Where("fly_request_id = ?", flyRequestID).
+		Preload("Rumb").
+		Find(&rumbs).Error
+	return rumbs, err
 }

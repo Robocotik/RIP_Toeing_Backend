@@ -65,13 +65,44 @@ func (h *Handler) GetFlyRequestsAPI(ctx *gin.Context) {
 }
 
 func (h *Handler) GetFlyRequestAPI(ctx *gin.Context) {
-	id, _ := strconv.Atoi(ctx.Param("id"))
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid fly request id"})
+		return
+	}
+
+	// Получаем заявку
 	req, err := h.Repository.GetFlyRequestByID(id)
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, gin.H{"error": "Заявка не найдена"})
 		return
 	}
-	ctx.JSON(http.StatusOK, req)
+
+	// Получаем все румбы заявки
+	rumbLinks, err := h.Repository.GetRumbsByFlyRequestID(id)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка при получении услуг"})
+		return
+	}
+
+	// Формируем массив с нужными полями румба
+	rumbs := make([]gin.H, 0, len(rumbLinks))
+	for _, link := range rumbLinks {
+		rumbs = append(rumbs, gin.H{
+			"id":           link.Rumb.ID,
+			"title":        link.Rumb.Title,
+			"image":        link.Rumb.Image,
+			"SegmentOrder": link.SegmentOrder,
+			"DistanceKM":   link.DistanceKM,
+			"WindSpeedKMH": link.WindSpeedKMH,
+			"IsMain":       link.IsMain,
+		})
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"fly_request": req,
+		"rumbs":       rumbs,
+	})
 }
 
 func (h *Handler) CreateFlyRequest(ctx *gin.Context) {

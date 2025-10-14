@@ -9,6 +9,6 @@ type FlyRequest_Rumb struct {
 	WindSpeedKMH float64 `gorm:"not null"`
 	IsMain       bool    `gorm:"default:false"`
 
-	FlyRequest FlyRequest `gorm:"foreignKey:FlyRequestID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
-	Rumb       Rumb       `gorm:"foreignKey:RumbID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
+	FlyRequest FlyRequest `gorm:"foreignKey:FlyRequestID;references:ID;constraint:OnUpdate:CASCADE"`
+	Rumb       Rumb       `gorm:"foreignKey:RumbID;references:ID;constraint:OnUpdate:CASCADE"`
 }

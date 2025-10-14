@@ -139,3 +139,18 @@ func (r *Repository) CreateFlyRequestRumb(flyRequestRumb ds.FlyRequest_Rumb) err
 	}
 	return nil
 }
+
+func (r *Repository) DeleteFlyRequestRumb(flyRequestID, rumbID uint) error {
+	return r.db.
+		Where("fly_request_id = ? AND rumb_id = ?", flyRequestID, rumbID).
+		Delete(&ds.FlyRequest_Rumb{}).Error
+}
+
+func (r *Repository) UpdateFlyRequestRumb(flyRequestID, rumbID uint, distanceKM, windSpeedKMH float64) error {
+	return r.db.Model(&ds.FlyRequest_Rumb{}).
+		Where("fly_request_id = ? AND rumb_id = ?", flyRequestID, rumbID).
+		Updates(map[string]interface{}{
+			"distance_km":    distanceKM,
+			"wind_speed_kmh": windSpeedKMH,
+		}).Error
+}

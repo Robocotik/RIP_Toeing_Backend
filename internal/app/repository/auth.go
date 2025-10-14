@@ -3,6 +3,7 @@ package repository
 import (
 	"backend/internal/app/ds"
 	"errors"
+	"fmt"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -52,4 +53,29 @@ func (r *Repository) AuthenticateUser(login, password string) (*ds.User, error) 
 
 	// Успешная аутентификация
 	return &user, nil
+}
+
+func (r *Repository) GetUserByID(id int) (ds.User, error) {
+	var user ds.User
+	if err := r.db.First(&user, id).Error; err != nil {
+		return ds.User{}, fmt.Errorf("user not found")
+	}
+	return user, nil
+}
+
+func (r *Repository) UpdateUser(user *ds.User) error {
+	// Если пароль передан — хэшируем
+	if user.Password != "" {
+		hash, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return fmt.Errorf("failed to hash password: %v", err)
+		}
+		user.Password = string(hash)
+	}
+
+	return r.db.Model(&ds.User{}).Where("id = ?", user.ID).
+		Updates(map[string]interface{}{
+			"login":    user.Login,
+			"password": user.Password,
+		}).Error
 }

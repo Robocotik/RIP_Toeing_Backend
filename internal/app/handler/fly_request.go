@@ -171,6 +171,64 @@ func (h *Handler) AddToRequest(ctx *gin.Context) {
 	ctx.Redirect(http.StatusFound, "/")
 }
 
+func (h *Handler) DeleteFlyRequestRumb(ctx *gin.Context) {
+	flyRequestID, err := strconv.Atoi(ctx.Param("flyRequestID"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid fly request id"})
+		return
+	}
+	rumbID, err := strconv.Atoi(ctx.Param("rumbID"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid rumb id"})
+		return
+	}
+
+	err = h.Repository.DeleteFlyRequestRumb(uint(flyRequestID), uint(rumbID))
+	if err != nil {
+		logrus.Error("Failed to delete fly request rumb:", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to delete rumb from request"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"message": "rumb deleted from fly request"})
+}
+
+func (h *Handler) UpdateFlyRequestRumb(ctx *gin.Context) {
+	flyRequestID, err := strconv.Atoi(ctx.Param("flyRequestID"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid fly request id"})
+		return
+	}
+	rumbID, err := strconv.Atoi(ctx.Param("rumbID"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid rumb id"})
+		return
+	}
+
+	var input struct {
+		DistanceKM   float64 `json:"distance_km"`
+		WindSpeedKMH float64 `json:"wind_speed_kmh"`
+	}
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		return
+	}
+
+	err = h.Repository.UpdateFlyRequestRumb(uint(flyRequestID), uint(rumbID), input.DistanceKM, input.WindSpeedKMH)
+	if err != nil {
+		logrus.Error("Failed to update fly request rumb:", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update rumb in request"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"fly_request_id": flyRequestID,
+		"rumb_id":        rumbID,
+		"distance_km":    input.DistanceKM,
+		"wind_speed_kmh": input.WindSpeedKMH,
+	})
+}
+
 // func (h *Handler) DeleteFlyRequest(ctx *gin.Context) {
 // 	idStr := ctx.Param("id")
 // 	flyRequestID, err := strconv.Atoi(idStr)

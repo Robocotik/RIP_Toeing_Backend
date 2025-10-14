@@ -7,12 +7,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (h *Handler) RegisterAuthRoutes(r *gin.Engine) {
-	api := r.Group("/api/users")
-	{
-		api.POST("/register", h.RegisterUser)
-		api.POST("/login", h.LoginUser)
-	}
+type AuthRequest struct {
+	Login    string `json:"login"`
+	Password string `json:"password"`
 }
 
 func (h *Handler) RegisterUser(ctx *gin.Context) {
@@ -47,4 +44,56 @@ func (h *Handler) LoginUser(ctx *gin.Context) {
 		"login":        user.Login,
 		"is_moderator": user.IsModerator,
 	})
+}
+
+func (h *Handler) LogoutUser(ctx *gin.Context) {
+	// Для простого токена просто возвращаем успех
+	ctx.JSON(http.StatusOK, gin.H{"status": "logged out"})
+}
+
+// GET /auth/users/me
+func (h *Handler) GetCurrentUser(ctx *gin.Context) {
+	userIDInterface, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "not authenticated"})
+		return
+	}
+	userID := userIDInterface.(int)
+
+	user, err := h.Repository.GetUserByID(userID)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, user)
+}
+
+// PUT /auth/users/me
+func (h *Handler) UpdateCurrentUser(ctx *gin.Context) {
+	userIDInterface, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "not authenticated"})
+		return
+	}
+	userID := userIDInterface.(int)
+
+	var req AuthRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON"})
+		return
+	}
+
+	user := ds.User{
+		ID:       userID,
+		Login:    req.Login,
+		Password: req.Password,
+	}
+
+	if err := h.Repository.UpdateUser(&user); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{"status": "updated"})
 }

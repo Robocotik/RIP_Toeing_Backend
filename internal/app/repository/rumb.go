@@ -7,7 +7,7 @@ import (
 
 func (r *Repository) GetRumbs() ([]ds.Rumb, error) {
 	var rumbs []ds.Rumb
-	err := r.db.Find(&rumbs).Error
+	err := r.db.Order("id ASC").Find(&rumbs).Error
 	return rumbs, err
 }
 

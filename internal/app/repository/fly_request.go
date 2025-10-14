@@ -2,15 +2,113 @@ package repository
 
 import (
 	"backend/internal/app/ds"
+	"errors"
 	"fmt"
+
+	"gorm.io/gorm"
 )
 
-func (r *Repository) CreateFlyRequest(flyRequest *ds.FlyRequest) error {
-	err := r.db.Create(flyRequest).Error
+type CurrentRequestInfo struct {
+	RequestID int
+	RumbCount int
+}
+
+func (r *Repository) GetCurrentRequestInfo(userID int) (CurrentRequestInfo, error) {
+	var info CurrentRequestInfo
+	var request ds.FlyRequest
+	err := r.db.Where("created_by_id = ? AND status = ?", userID, "created").
+		Order("created_at DESC").
+		First(&request).Error
+	if err == gorm.ErrRecordNotFound {
+		return CurrentRequestInfo{0, 0}, nil
+	} else if err != nil {
+		return info, err
+	}
+
+	var count int64
+	err = r.db.Model(&ds.FlyRequest_Rumb{}).
+		Where("fly_request_id = ?", request.ID).
+		Count(&count).Error
 	if err != nil {
-		return fmt.Errorf("failed to create fly request: %v", err)
+		return info, err
+	}
+
+	return CurrentRequestInfo{request.ID, int(count)}, nil
+}
+
+func (r *Repository) GetFlyRequests() ([]ds.FlyRequest, error) {
+	var reqs []ds.FlyRequest
+	err := r.db.Find(&reqs).Error
+	return reqs, err
+}
+
+func (r *Repository) GetFlyRequestByID(id int) (*ds.FlyRequest, error) {
+	var req ds.FlyRequest
+	err := r.db.First(&req, id).Error
+	return &req, err
+}
+
+func (r *Repository) CreateFlyRequest(req *ds.FlyRequest) error {
+	return r.db.Create(req).Error
+}
+
+func (r *Repository) UpdateFlyRequest(req *ds.FlyRequest) error {
+	return r.db.Save(req).Error
+}
+
+func (r *Repository) DeleteFlyRequest(id int) error {
+	// Меняем статус заявки на "deleted"
+	err := r.db.Model(&ds.FlyRequest{}).
+		Where("id = ?", id).
+		Update("status", "deleted").Error
+	if err != nil {
+		return fmt.Errorf("failed to delete fly request (set status to deleted): %v", err)
 	}
 	return nil
+}
+
+
+// AddRumbToRequest — добавляет румб к заявке (fly_request_rumbs)
+func (r *Repository) AddRumbToRequest(requestID, rumbID int) error {
+	// Проверим, что заявка существует
+	var request ds.FlyRequest
+	if err := r.db.First(&request, requestID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("fly request not found")
+		}
+		return err
+	}
+
+	// Проверим, что румб существует
+	var rumb ds.Rumb
+	if err := r.db.First(&rumb, rumbID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("rumb not found")
+		}
+		return err
+	}
+
+	// Проверим, не добавлен ли уже этот румб в заявку
+	var existing ds.FlyRequest_Rumb
+	err := r.db.Where("fly_request_id = ? AND rumb_id = ?", requestID, rumbID).First(&existing).Error
+	if err == nil {
+		return errors.New("rumb already added to request")
+	}
+
+	// Добавляем с порядком (segment_order)
+	var count int64
+	r.db.Model(&ds.FlyRequest_Rumb{}).Where("fly_request_id = ?", requestID).Count(&count)
+
+	frr := ds.FlyRequest_Rumb{
+		FlyRequestID: uint(requestID),
+		RumbID:       uint(rumbID),
+		SegmentOrder: int(count + 1),
+		DistanceKM:   0,
+		WindSpeedKMH: 0,
+		IsMain:       false,
+	}
+
+	return r.db.Create(&frr).Error
 }
 
 func (r *Repository) GetFlyRequestByStatus(status string) (ds.FlyRequest, error) {
@@ -40,58 +138,4 @@ func (r *Repository) CreateFlyRequestRumb(flyRequestRumb ds.FlyRequest_Rumb) err
 		return fmt.Errorf("failed to create fly request rumb link: %v", err)
 	}
 	return nil
-}
-
-type CurrentRequestInfo struct {
-	RequestID int `json:"request_id"`
-	RumbCount int `json:"rumb_count"`
-}
-
-func (r *Repository) GetCurrentRequestInfo(userID int) (CurrentRequestInfo, error) {
-	var info CurrentRequestInfo
-
-	err := r.db.Table("fly_requests fr").
-		Select("fr.id as request_id, COUNT(frr.rumb_id) as rumb_count").
-		Joins("LEFT JOIN fly_request_rumbs frr ON fr.id = frr.fly_request_id").
-		Where("fr.status = ? AND fr.created_by_id = ?", "created", userID).
-		Group("fr.id").
-		Order("fr.id DESC").
-		Limit(1).
-		Scan(&info).Error
-
-	if err != nil {
-		return CurrentRequestInfo{}, fmt.Errorf("failed to get current request info: %v", err)
-	}
-
-	return info, nil
-}
-
-func (r *Repository) GetFlyRequestByID(id int) (ds.FlyRequest, error) {
-	var flyRequest ds.FlyRequest
-	err := r.db.First(&flyRequest, id).Error
-	if err != nil {
-		return ds.FlyRequest{}, fmt.Errorf("failed to get fly request by ID: %v", err)
-	}
-	return flyRequest, nil
-}
-
-
-func (r *Repository) UpdateFlyRequestStatus(id int, status string) error {
-	err := r.db.Model(&ds.FlyRequest{}).
-		Where("id = ?", id).
-		Update("status", status).Error
-	if err != nil {
-		return fmt.Errorf("failed to update fly request status: %v", err)
-	}
-	return nil
-}
-
-
-func (r *Repository) GetAllFlyRequests() ([]ds.FlyRequest, error) {
-	var flyRequests []ds.FlyRequest
-	err := r.db.Find(&flyRequests).Error
-	if err != nil {
-		return nil, fmt.Errorf("failed to get all fly requests: %v", err)
-	}
-	return flyRequests, nil
 }

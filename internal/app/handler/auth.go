@@ -57,7 +57,7 @@ func (h *Handler) RegisterUser(ctx *gin.Context) {
 // @Success 200 {object} ds.LoginResponse "JWT токен и информация о пользователе"
 // @Failure 400 {object} object "Неверные данные запроса"
 // @Failure 401 {object} object "Неверные учетные данные"
-// @Router /api/auth/login [post]
+// @Router /auth/login [post]
 func (h *Handler) LoginUser(ctx *gin.Context) {
 	var creds ds.LoginRequest
 	if err := ctx.ShouldBindJSON(&creds); err != nil {

@@ -13,6 +13,8 @@ type CurrentRequestInfo struct {
 	RumbCount int
 }
 
+// GetCurrentRequestInfo возвращает информацию о текущей заявке пользователя
+
 func (r *Repository) GetCurrentRequestInfo(userID int) (CurrentRequestInfo, error) {
 	var info CurrentRequestInfo
 	var request ds.FlyRequest
@@ -36,11 +38,7 @@ func (r *Repository) GetCurrentRequestInfo(userID int) (CurrentRequestInfo, erro
 	return CurrentRequestInfo{request.ID, int(count)}, nil
 }
 
-// func (r *Repository) GetFlyRequests() ([]ds.FlyRequest, error) {
-// 	var reqs []ds.FlyRequest
-// 	err := r.db.Find(&reqs).Error
-// 	return reqs, err
-// }
+// GetFlyRequests возвращает список заявок на полет с фильтрацией
 
 func (r *Repository) GetFlyRequests(status, formedAfter, formedBefore string) ([]ds.FlyRequest, error) {
 	var reqs []ds.FlyRequest
@@ -65,20 +63,27 @@ func (r *Repository) GetFlyRequests(status, formedAfter, formedBefore string) ([
 	return reqs, err
 }
 
+// GetFlyRequestByID возвращает заявку на полет по ID
+
 func (r *Repository) GetFlyRequestByID(id int) (*ds.FlyRequest, error) {
 	var req ds.FlyRequest
 	err := r.db.First(&req, id).Error
 	return &req, err
 }
 
+// CreateFlyRequest создает новую заявку на полет
+
 func (r *Repository) CreateFlyRequest(req *ds.FlyRequest) error {
 	return r.db.Create(req).Error
 }
+
+// UpdateFlyRequest обновляет информацию о заявке на полет
 
 func (r *Repository) UpdateFlyRequest(req *ds.FlyRequest) error {
 	return r.db.Save(req).Error
 }
 
+// DeleteFlyRequest помечает заявку как удаленную (меняет статус на "deleted")
 func (r *Repository) DeleteFlyRequest(id int) error {
 	// Меняем статус заявки на "deleted"
 	err := r.db.Model(&ds.FlyRequest{}).
@@ -90,7 +95,7 @@ func (r *Repository) DeleteFlyRequest(id int) error {
 	return nil
 }
 
-// AddRumbToRequest — добавляет румб к заявке (fly_request_rumbs)
+// AddRumbToRequest добавляет румб к заявке на полет
 func (r *Repository) AddRumbToRequest(requestID, rumbID int) error {
 	// Проверим, что заявка существует
 	var request ds.FlyRequest
@@ -133,6 +138,7 @@ func (r *Repository) AddRumbToRequest(requestID, rumbID int) error {
 	return r.db.Create(&frr).Error
 }
 
+// GetFlyRequestByStatus возвращает заявку по статусу
 func (r *Repository) GetFlyRequestByStatus(status string) (ds.FlyRequest, error) {
 	var flyRequest ds.FlyRequest
 	err := r.db.Where("status = ?", status).First(&flyRequest).Error
@@ -141,6 +147,8 @@ func (r *Repository) GetFlyRequestByStatus(status string) (ds.FlyRequest, error)
 	}
 	return flyRequest, nil
 }
+
+// GetMaxSegmentOrder возвращает максимальный порядковый номер сегмента в заявке
 
 func (r *Repository) GetMaxSegmentOrder(flyRequestID int) (int, error) {
 	var maxOrder int
@@ -154,6 +162,7 @@ func (r *Repository) GetMaxSegmentOrder(flyRequestID int) (int, error) {
 	return maxOrder, nil
 }
 
+// CreateFlyRequestRumb создает связь между заявкой и румбом
 func (r *Repository) CreateFlyRequestRumb(flyRequestRumb ds.FlyRequest_Rumb) error {
 	err := r.db.Create(&flyRequestRumb).Error
 	if err != nil {
@@ -162,11 +171,14 @@ func (r *Repository) CreateFlyRequestRumb(flyRequestRumb ds.FlyRequest_Rumb) err
 	return nil
 }
 
+// DeleteFlyRequestRumb удаляет связь между заявкой и румбом
 func (r *Repository) DeleteFlyRequestRumb(flyRequestID, rumbID uint) error {
 	return r.db.
 		Where("fly_request_id = ? AND rumb_id = ?", flyRequestID, rumbID).
 		Delete(&ds.FlyRequest_Rumb{}).Error
 }
+
+// UpdateFlyRequestRumb обновляет параметры связи заявки и румба
 
 func (r *Repository) UpdateFlyRequestRumb(flyRequestID, rumbID uint, distanceKM, windSpeedKMH float64) error {
 	return r.db.Model(&ds.FlyRequest_Rumb{}).
@@ -177,6 +189,7 @@ func (r *Repository) UpdateFlyRequestRumb(flyRequestID, rumbID uint, distanceKM,
 		}).Error
 }
 
+// GetByIDWithRumbs возвращает заявку с полной информацией о связанных румбах
 func (r *Repository) GetByIDWithRumbs(id uint) (*ds.FlyRequest, []ds.FlyRequest_Rumb, error) {
 	var req ds.FlyRequest
 	if err := r.db.First(&req, id).Error; err != nil {
@@ -191,7 +204,7 @@ func (r *Repository) GetByIDWithRumbs(id uint) (*ds.FlyRequest, []ds.FlyRequest_
 	return &req, rumbs, nil
 }
 
-// Обновление статуса заявки, с опциональным moderatorID
+// UpdateStatus обновляет статус заявки на полет
 func (r *Repository) UpdateStatus(id uint, status string, moderatorID *int) error {
 	updates := map[string]interface{}{"status": status}
 	if moderatorID != nil {
@@ -207,21 +220,22 @@ func (r *Repository) UpdateStatus(id uint, status string, moderatorID *int) erro
 	return nil
 }
 
+// GetDraftByUser возвращает черновую заявку пользователя и количество румбов в ней
 func (r *Repository) GetDraftByUser(userID int) (*ds.FlyRequest, int64, error) {
-    var fr ds.FlyRequest
-    // Ищем черновик
-    if err := r.db.Where("created_by_id = ? AND status = ?", userID, "draft").First(&fr).Error; err != nil {
-        if err == gorm.ErrRecordNotFound {
-            return nil, 0, nil
-        }
-        return nil, 0, err
-    }
+	var fr ds.FlyRequest
+	// Ищем черновик
+	if err := r.db.Where("created_by_id = ? AND status = ?", userID, "draft").First(&fr).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, 0, nil
+		}
+		return nil, 0, err
+	}
 
-    // Считаем количество услуг в заявке
-    var count int64
-    if err := r.db.Model(&ds.FlyRequest_Rumb{}).Where("fly_request_id = ?", fr.ID).Count(&count).Error; err != nil {
-        return nil, 0, err
-    }
+	// Считаем количество услуг в заявке
+	var count int64
+	if err := r.db.Model(&ds.FlyRequest_Rumb{}).Where("fly_request_id = ?", fr.ID).Count(&count).Error; err != nil {
+		return nil, 0, err
+	}
 
-    return &fr, count, nil
+	return &fr, count, nil
 }

@@ -1,0 +1,1273 @@
+{
+    "schemes": [
+        "http"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "API системы управления заявками на полеты",
+        "title": "Flight Request API",
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {
+            "name": "API Support",
+            "url": "http://www.swagger.io/support",
+            "email": "support@swagger.io"
+        },
+        "license": {
+            "name": "MIT",
+            "url": "https://opensource.org/licenses/MIT"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/api",
+    "paths": {
+        "/": {
+            "get": {
+                "description": "Отображает HTML страницу со списком румбов с возможностью поиска и информацией о текущей заявке",
+                "consumes": [
+                    "text/html"
+                ],
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "Frontend"
+                ],
+                "summary": "Главная страница с румбами",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Поисковый запрос для фильтрации румбов по названию",
+                        "name": "query",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "HTML страница с румбами",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/login": {
+            "post": {
+                "description": "Проверяет учетные данные и возвращает информацию о пользователе",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Аутентификация пользователя",
+                "parameters": [
+                    {
+                        "description": "Учетные данные",
+                        "name": "credentials",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Информация о пользователе",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные данные запроса",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "401": {
+                        "description": "Неверные учетные данные",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/logout": {
+            "post": {
+                "description": "Завершает сеанс пользователя",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Выход пользователя",
+                "responses": {
+                    "200": {
+                        "description": "Сообщение о выходе",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Возвращает информацию о текущем аутентифицированном пользователе",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Получить текущего пользователя",
+                "responses": {
+                    "200": {
+                        "description": "Информация о пользователе",
+                        "schema": {
+                            "$ref": "#/definitions/ds.User"
+                        }
+                    },
+                    "401": {
+                        "description": "Пользователь не аутентифицирован",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Пользователь не найден",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Обновляет логин и пароль текущего пользователя",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Обновить данные текущего пользователя",
+                "parameters": [
+                    {
+                        "description": "Новые данные пользователя",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.AuthRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Сообщение об успешном обновлении",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные данные запроса",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "401": {
+                        "description": "Пользователь не аутентифицирован",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/register": {
+            "post": {
+                "description": "Создает нового пользователя в системе",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Регистрация нового пользователя",
+                "parameters": [
+                    {
+                        "description": "Данные пользователя",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ds.User"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Сообщение об успешной регистрации",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные данные пользователя",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/flyRequests": {
+            "get": {
+                "description": "Возвращает список заявок на полет с возможностью фильтрации по статусу и датам",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "FlyRequests"
+                ],
+                "summary": "Получить список заявок на полет",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Фильтр по статусу (draft, formed, finished, rejected)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Фильтр по дате формирования (\u003e=) в формате YYYY-MM-DD",
+                        "name": "formedAfter",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Фильтр по дате формирования (\u003c=) в формате YYYY-MM-DD",
+                        "name": "formedBefore",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список заявок",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "object"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Создает новую заявку на полет в статусе \"draft\"",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "FlyRequests"
+                ],
+                "summary": "Создать новую заявку на полет",
+                "responses": {
+                    "201": {
+                        "description": "Созданная заявка",
+                        "schema": {
+                            "$ref": "#/definitions/ds.FlyRequest"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/flyRequests/current": {
+            "get": {
+                "description": "Возвращает ID текущей черновой заявки и количество румбов в ней",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "FlyRequests"
+                ],
+                "summary": "Получить текущую заявку пользователя",
+                "responses": {
+                    "200": {
+                        "description": "Информация о текущей заявке",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/flyRequests/rumbs/{flyRequestID}/{rumbID}": {
+            "put": {
+                "description": "Обновляет расстояние и скорость ветра для румба в заявке",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "FlyRequestRumbs"
+                ],
+                "summary": "Обновить параметры румба в заявке",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID заявки на полет",
+                        "name": "flyRequestID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ID румба",
+                        "name": "rumbID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Данные для обновления",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Обновленные данные",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные данные запроса",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Удаляет связь между румбом и заявкой на полет",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "FlyRequestRumbs"
+                ],
+                "summary": "Удалить румб из заявки",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID заявки на полет",
+                        "name": "flyRequestID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "ID румба",
+                        "name": "rumbID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Сообщение об успешном удалении",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные ID",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/flyRequests/{id}": {
+            "get": {
+                "description": "Возвращает полную информацию о заявке на полет включая связанные румбы",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "FlyRequests"
+                ],
+                "summary": "Получить детальную информацию о заявке на полет",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID заявки на полет",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Детальная информация о заявке",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный ID заявки",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Заявка не найдена",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Обновляет информацию о заявке на полет",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "FlyRequests"
+                ],
+                "summary": "Обновить заявку на полет",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID заявки на полет",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Данные для обновления заявки",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ds.FlyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Обновленная заявка",
+                        "schema": {
+                            "$ref": "#/definitions/ds.FlyRequest"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные данные запроса",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Удаляет заявку на полет по ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "FlyRequests"
+                ],
+                "summary": "Удалить заявку на полет",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID заявки на полет",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Перенаправление на главную страницу"
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/flyRequests/{id}/calculatedBy": {
+            "put": {
+                "description": "Обновляет информацию о том, кем был выполнен расчет заявки",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "FlyRequests"
+                ],
+                "summary": "Обновить поле CalculatedBy заявки",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID заявки на полет",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Данные для обновления",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Обновленная информация",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные данные запроса",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Заявка не найдена",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/flyRequests/{id}/finish": {
+            "put": {
+                "description": "Переводит заявку в статус \"finished\" или \"rejected\" с указанием модератора",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "FlyRequests"
+                ],
+                "summary": "Завершить или отклонить заявку",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID заявки на полет",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Данные для завершения",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Результат операции",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные данные запроса",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/flyRequests/{id}/form": {
+            "put": {
+                "description": "Переводит заявку в статус \"formed\" после проверки всех сегментов",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "FlyRequests"
+                ],
+                "summary": "Сформировать заявку",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID заявки на полет",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Сообщение об успешном формировании",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "400": {
+                        "description": "Не все сегменты заполнены",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Заявка не найдена",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/rumbs": {
+            "get": {
+                "description": "Возвращает JSON массив всех румбов в системе",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rumbs"
+                ],
+                "summary": "Получить список всех румбов",
+                "responses": {
+                    "200": {
+                        "description": "Список румбов",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/ds.Rumb"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Создает новый румб в системе",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rumbs"
+                ],
+                "summary": "Создать новый румб",
+                "parameters": [
+                    {
+                        "description": "Данные для создания румба",
+                        "name": "rumb",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ds.Rumb"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Созданный румб",
+                        "schema": {
+                            "$ref": "#/definitions/ds.Rumb"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные данные запроса",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/rumbs/addToRequest/{id}": {
+            "post": {
+                "description": "Добавляет указанный румб в активную заявку или создает новую заявку",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "FlyRequests"
+                ],
+                "summary": "Добавить румб в заявку",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID румба для добавления",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Перенаправление на главную страницу"
+                    },
+                    "400": {
+                        "description": "Неверный ID румба",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Румб не найден",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/rumbs/{id}": {
+            "get": {
+                "description": "Возвращает детальную информацию о конкретном румбе",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rumbs"
+                ],
+                "summary": "Получить информацию о румбе по ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID румба",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Информация о румбе",
+                        "schema": {
+                            "$ref": "#/definitions/ds.Rumb"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный ID румба",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Румб не найден",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Обновляет информацию о существующем румбе",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rumbs"
+                ],
+                "summary": "Обновить информацию о румбе",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID румба",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Новые данные румба",
+                        "name": "rumb",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ds.Rumb"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Обновленный румб",
+                        "schema": {
+                            "$ref": "#/definitions/ds.Rumb"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные данные запроса",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Удаляет румб из системы по ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rumbs"
+                ],
+                "summary": "Удалить румб",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID румба",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Сообщение об успешном удалении",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/rumbs/{id}/image": {
+            "post": {
+                "description": "Загружает изображение для указанного румба в MinIO",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rumbs"
+                ],
+                "summary": "Загрузить изображение для румба",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID румба",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Изображение для загрузки",
+                        "name": "image",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Информация об обновленном румбе",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные данные запроса",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "404": {
+                        "description": "Румб не найден",
+                        "schema": {
+                            "type": "object"
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка загрузки изображения",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/fly_calculation/{id}": {
+            "get": {
+                "description": "Отображает HTML страницу с детальной информацией о заявке на полет",
+                "consumes": [
+                    "text/html"
+                ],
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "Frontend"
+                ],
+                "summary": "Получить страницу заявки на полет",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID заявки на полет",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "HTML страница заявки",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный ID заявки",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Заявка не найдена",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/rumb/{id}": {
+            "get": {
+                "description": "Отображает HTML страницу с детальной информацией о конкретном румбе",
+                "consumes": [
+                    "text/html"
+                ],
+                "produces": [
+                    "text/html"
+                ],
+                "tags": [
+                    "Frontend"
+                ],
+                "summary": "Страница детальной информации о румбе",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID румба",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "HTML страница румба",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный ID румба",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Румб не найден",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "ds.FlyRequest": {
+            "description": "Модель заявки на полет с информацией о статусе и времени создания",
+            "type": "object",
+            "properties": {
+                "calculated_by": {
+                    "description": "Имя/идентификатор системы или пользователя, выполнившего расчет",
+                    "type": "string",
+                    "example": "auto_calc_system"
+                },
+                "created_at": {
+                    "description": "Дата и время создания заявки",
+                    "type": "string",
+                    "example": "2023-10-05T14:30:00Z"
+                },
+                "created_by_id": {
+                    "description": "ID пользователя, создавшего заявку",
+                    "type": "integer",
+                    "example": 123
+                },
+                "formed_at": {
+                    "description": "Дата и время формирования заявки",
+                    "type": "string",
+                    "example": "2023-10-05T15:00:00Z"
+                },
+                "id": {
+                    "description": "Уникальный идентификатор заявки",
+                    "type": "integer",
+                    "example": 1
+                },
+                "moderator_id": {
+                    "description": "ID модератора, обработавшего заявку",
+                    "type": "integer",
+                    "example": 456
+                },
+                "status": {
+                    "description": "Статус заявки (например: \"pending\", \"approved\", \"rejected\")",
+                    "type": "string",
+                    "example": "pending"
+                }
+            }
+        },
+        "ds.Rumb": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "Уникальный идентификатор направления",
+                    "type": "integer",
+                    "example": 1
+                },
+                "image": {
+                    "description": "Ссылка на изображение направления",
+                    "type": "string",
+                    "example": "/images/north-east.png"
+                },
+                "title": {
+                    "description": "Название направления",
+                    "type": "string",
+                    "example": "Север-Восток"
+                }
+            }
+        },
+        "ds.User": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "Уникальный идентификатор пользователя",
+                    "type": "integer",
+                    "example": 1
+                },
+                "is_moderator": {
+                    "description": "Флаг, указывающий имеет ли пользователь права модератора",
+                    "type": "boolean",
+                    "example": false
+                },
+                "login": {
+                    "description": "Логин пользователя (уникальный)",
+                    "type": "string",
+                    "example": "user123"
+                }
+            }
+        },
+        "handler.AuthRequest": {
+            "type": "object",
+            "properties": {
+                "login": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

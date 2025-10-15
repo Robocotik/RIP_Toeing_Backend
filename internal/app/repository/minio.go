@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"mime/multipart"
 
+	"context"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
-	"context"
 )
 
+// UploadRumbImageToMinio загружает изображение для румба в MinIO хранилище
+// Удаляет старое изображение если оно существовало
 func (r *Repository) UploadRumbImageToMinio(rumbID int, file *multipart.FileHeader, fileName string) error {
 	ctx := context.Background()
 

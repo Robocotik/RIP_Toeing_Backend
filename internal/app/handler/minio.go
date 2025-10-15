@@ -7,6 +7,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// UploadRumbImage godoc
+// @Summary Загрузить изображение для румба
+// @Description Загружает изображение для указанного румба в MinIO
+// @Tags Rumbs
+// @Accept multipart/form-data
+// @Produce json
+// @Param id path int true "ID румба"
+// @Param image formData file true "Изображение для загрузки"
+// @Success 200 {object} object "Информация об обновленном румбе"
+// @Failure 400 {object} object "Неверные данные запроса"
+// @Failure 404 {object} object "Румб не найден"
+// @Failure 500 {object} object "Ошибка загрузки изображения"
+// @Router /api/rumbs/{id}/image [post]
 func (h *Handler) UploadRumbImage(ctx *gin.Context) {
 	// Получаем ID услуги из URL
 	idStr := ctx.Param("id")

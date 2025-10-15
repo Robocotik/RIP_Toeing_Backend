@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
-
+// RegisterUser регистрирует нового пользователя в системе
 func (r *Repository) RegisterUser(user *ds.User) error {
 	// Проверка существующего логина
 	var existing ds.User
@@ -33,9 +33,7 @@ func (r *Repository) RegisterUser(user *ds.User) error {
 	return nil
 }
 
-// AuthenticateUser ищет пользователя по логину и сверяет пароль.
-// Возвращает найденного пользователя (с заполнённым полем Password — хеш) при успехе.
-// Если логин/пароль неверны — возвращает ошибку.
+// AuthenticateUser ищет пользователя по логину и сверяет пароль
 func (r *Repository) AuthenticateUser(login, password string) (*ds.User, error) {
 	var user ds.User
 	if err := r.db.Where("login = ?", login).First(&user).Error; err != nil {
@@ -47,14 +45,13 @@ func (r *Repository) AuthenticateUser(login, password string) (*ds.User, error) 
 
 	// Сравниваем хеш пароля
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
-		// неверный пароль
 		return nil, errors.New("invalid credentials")
 	}
 
-	// Успешная аутентификация
 	return &user, nil
 }
 
+// GetUserByID возвращает пользователя по ID
 func (r *Repository) GetUserByID(id int) (ds.User, error) {
 	var user ds.User
 	if err := r.db.First(&user, id).Error; err != nil {
@@ -63,6 +60,7 @@ func (r *Repository) GetUserByID(id int) (ds.User, error) {
 	return user, nil
 }
 
+// UpdateUser обновляет данные пользователя
 func (r *Repository) UpdateUser(user *ds.User) error {
 	// Если пароль передан — хэшируем
 	if user.Password != "" {

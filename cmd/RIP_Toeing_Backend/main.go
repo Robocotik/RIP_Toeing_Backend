@@ -12,6 +12,25 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// @title Flight Request API
+// @version 1.0
+// @description API системы управления заявками на полеты
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+
+// @license.name MIT  
+// @license.url https://opensource.org/licenses/MIT
+
+// @host localhost:8080
+// @BasePath /api
+// @schemes http
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
 	router := gin.Default()
 	conf, err := config.NewConfig()

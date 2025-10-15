@@ -1,0 +1,852 @@
+basePath: /api
+definitions:
+  ds.FlyRequest:
+    description: Модель заявки на полет с информацией о статусе и времени создания
+    properties:
+      calculated_by:
+        description: Имя/идентификатор системы или пользователя, выполнившего расчет
+        example: auto_calc_system
+        type: string
+      created_at:
+        description: Дата и время создания заявки
+        example: "2023-10-05T14:30:00Z"
+        type: string
+      created_by_id:
+        description: ID пользователя, создавшего заявку
+        example: 123
+        type: integer
+      formed_at:
+        description: Дата и время формирования заявки
+        example: "2023-10-05T15:00:00Z"
+        type: string
+      id:
+        description: Уникальный идентификатор заявки
+        example: 1
+        type: integer
+      moderator_id:
+        description: ID модератора, обработавшего заявку
+        example: 456
+        type: integer
+      status:
+        description: 'Статус заявки (например: "pending", "approved", "rejected")'
+        example: pending
+        type: string
+    type: object
+  ds.Rumb:
+    properties:
+      id:
+        description: Уникальный идентификатор направления
+        example: 1
+        type: integer
+      image:
+        description: Ссылка на изображение направления
+        example: /images/north-east.png
+        type: string
+      title:
+        description: Название направления
+        example: Север-Восток
+        type: string
+    type: object
+  ds.User:
+    properties:
+      id:
+        description: Уникальный идентификатор пользователя
+        example: 1
+        type: integer
+      is_moderator:
+        description: Флаг, указывающий имеет ли пользователь права модератора
+        example: false
+        type: boolean
+      login:
+        description: Логин пользователя (уникальный)
+        example: user123
+        type: string
+    type: object
+  handler.AuthRequest:
+    properties:
+      login:
+        type: string
+      password:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: API системы управления заявками на полеты
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Flight Request API
+  version: "1.0"
+paths:
+  /:
+    get:
+      consumes:
+      - text/html
+      description: Отображает HTML страницу со списком румбов с возможностью поиска
+        и информацией о текущей заявке
+      parameters:
+      - description: Поисковый запрос для фильтрации румбов по названию
+        in: query
+        name: query
+        type: string
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML страница с румбами
+          schema:
+            type: string
+      summary: Главная страница с румбами
+      tags:
+      - Frontend
+  /api/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Проверяет учетные данные и возвращает информацию о пользователе
+      parameters:
+      - description: Учетные данные
+        in: body
+        name: credentials
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Информация о пользователе
+          schema:
+            type: object
+        "400":
+          description: Неверные данные запроса
+          schema:
+            type: object
+        "401":
+          description: Неверные учетные данные
+          schema:
+            type: object
+      summary: Аутентификация пользователя
+      tags:
+      - Auth
+  /api/auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Завершает сеанс пользователя
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Сообщение о выходе
+          schema:
+            type: object
+      summary: Выход пользователя
+      tags:
+      - Auth
+  /api/auth/me:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает информацию о текущем аутентифицированном пользователе
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Информация о пользователе
+          schema:
+            $ref: '#/definitions/ds.User'
+        "401":
+          description: Пользователь не аутентифицирован
+          schema:
+            type: object
+        "404":
+          description: Пользователь не найден
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получить текущего пользователя
+      tags:
+      - Auth
+    put:
+      consumes:
+      - application/json
+      description: Обновляет логин и пароль текущего пользователя
+      parameters:
+      - description: Новые данные пользователя
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/handler.AuthRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Сообщение об успешном обновлении
+          schema:
+            type: object
+        "400":
+          description: Неверные данные запроса
+          schema:
+            type: object
+        "401":
+          description: Пользователь не аутентифицирован
+          schema:
+            type: object
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Обновить данные текущего пользователя
+      tags:
+      - Auth
+  /api/auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Создает нового пользователя в системе
+      parameters:
+      - description: Данные пользователя
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/ds.User'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Сообщение об успешной регистрации
+          schema:
+            type: object
+        "400":
+          description: Неверные данные пользователя
+          schema:
+            type: object
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            type: object
+      summary: Регистрация нового пользователя
+      tags:
+      - Auth
+  /api/flyRequests:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список заявок на полет с возможностью фильтрации по
+        статусу и датам
+      parameters:
+      - description: Фильтр по статусу (draft, formed, finished, rejected)
+        in: query
+        name: status
+        type: string
+      - description: Фильтр по дате формирования (>=) в формате YYYY-MM-DD
+        in: query
+        name: formedAfter
+        type: string
+      - description: Фильтр по дате формирования (<=) в формате YYYY-MM-DD
+        in: query
+        name: formedBefore
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список заявок
+          schema:
+            items:
+              type: object
+            type: array
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            type: object
+      summary: Получить список заявок на полет
+      tags:
+      - FlyRequests
+    post:
+      consumes:
+      - application/json
+      description: Создает новую заявку на полет в статусе "draft"
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Созданная заявка
+          schema:
+            $ref: '#/definitions/ds.FlyRequest'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            type: object
+      summary: Создать новую заявку на полет
+      tags:
+      - FlyRequests
+  /api/flyRequests/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет заявку на полет по ID
+      parameters:
+      - description: ID заявки на полет
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: Перенаправление на главную страницу
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            type: object
+      summary: Удалить заявку на полет
+      tags:
+      - FlyRequests
+    get:
+      consumes:
+      - application/json
+      description: Возвращает полную информацию о заявке на полет включая связанные
+        румбы
+      parameters:
+      - description: ID заявки на полет
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Детальная информация о заявке
+          schema:
+            type: object
+        "400":
+          description: Неверный ID заявки
+          schema:
+            type: object
+        "404":
+          description: Заявка не найдена
+          schema:
+            type: object
+      summary: Получить детальную информацию о заявке на полет
+      tags:
+      - FlyRequests
+    put:
+      consumes:
+      - application/json
+      description: Обновляет информацию о заявке на полет
+      parameters:
+      - description: ID заявки на полет
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Данные для обновления заявки
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/ds.FlyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Обновленная заявка
+          schema:
+            $ref: '#/definitions/ds.FlyRequest'
+        "400":
+          description: Неверные данные запроса
+          schema:
+            type: object
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            type: object
+      summary: Обновить заявку на полет
+      tags:
+      - FlyRequests
+  /api/flyRequests/{id}/calculatedBy:
+    put:
+      consumes:
+      - application/json
+      description: Обновляет информацию о том, кем был выполнен расчет заявки
+      parameters:
+      - description: ID заявки на полет
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Данные для обновления
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Обновленная информация
+          schema:
+            type: object
+        "400":
+          description: Неверные данные запроса
+          schema:
+            type: object
+        "404":
+          description: Заявка не найдена
+          schema:
+            type: object
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            type: object
+      summary: Обновить поле CalculatedBy заявки
+      tags:
+      - FlyRequests
+  /api/flyRequests/{id}/finish:
+    put:
+      consumes:
+      - application/json
+      description: Переводит заявку в статус "finished" или "rejected" с указанием
+        модератора
+      parameters:
+      - description: ID заявки на полет
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Данные для завершения
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Результат операции
+          schema:
+            type: object
+        "400":
+          description: Неверные данные запроса
+          schema:
+            type: object
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            type: object
+      summary: Завершить или отклонить заявку
+      tags:
+      - FlyRequests
+  /api/flyRequests/{id}/form:
+    put:
+      consumes:
+      - application/json
+      description: Переводит заявку в статус "formed" после проверки всех сегментов
+      parameters:
+      - description: ID заявки на полет
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Сообщение об успешном формировании
+          schema:
+            type: object
+        "400":
+          description: Не все сегменты заполнены
+          schema:
+            type: object
+        "404":
+          description: Заявка не найдена
+          schema:
+            type: object
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            type: object
+      summary: Сформировать заявку
+      tags:
+      - FlyRequests
+  /api/flyRequests/current:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает ID текущей черновой заявки и количество румбов в ней
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Информация о текущей заявке
+          schema:
+            type: object
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            type: object
+      summary: Получить текущую заявку пользователя
+      tags:
+      - FlyRequests
+  /api/flyRequests/rumbs/{flyRequestID}/{rumbID}:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет связь между румбом и заявкой на полет
+      parameters:
+      - description: ID заявки на полет
+        in: path
+        name: flyRequestID
+        required: true
+        type: integer
+      - description: ID румба
+        in: path
+        name: rumbID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Сообщение об успешном удалении
+          schema:
+            type: object
+        "400":
+          description: Неверные ID
+          schema:
+            type: object
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            type: object
+      summary: Удалить румб из заявки
+      tags:
+      - FlyRequestRumbs
+    put:
+      consumes:
+      - application/json
+      description: Обновляет расстояние и скорость ветра для румба в заявке
+      parameters:
+      - description: ID заявки на полет
+        in: path
+        name: flyRequestID
+        required: true
+        type: integer
+      - description: ID румба
+        in: path
+        name: rumbID
+        required: true
+        type: integer
+      - description: Данные для обновления
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Обновленные данные
+          schema:
+            type: object
+        "400":
+          description: Неверные данные запроса
+          schema:
+            type: object
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            type: object
+      summary: Обновить параметры румба в заявке
+      tags:
+      - FlyRequestRumbs
+  /api/rumbs:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает JSON массив всех румбов в системе
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список румбов
+          schema:
+            items:
+              $ref: '#/definitions/ds.Rumb'
+            type: array
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            type: object
+      summary: Получить список всех румбов
+      tags:
+      - Rumbs
+    post:
+      consumes:
+      - application/json
+      description: Создает новый румб в системе
+      parameters:
+      - description: Данные для создания румба
+        in: body
+        name: rumb
+        required: true
+        schema:
+          $ref: '#/definitions/ds.Rumb'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Созданный румб
+          schema:
+            $ref: '#/definitions/ds.Rumb'
+        "400":
+          description: Неверные данные запроса
+          schema:
+            type: object
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            type: object
+      summary: Создать новый румб
+      tags:
+      - Rumbs
+  /api/rumbs/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет румб из системы по ID
+      parameters:
+      - description: ID румба
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Сообщение об успешном удалении
+          schema:
+            type: object
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            type: object
+      summary: Удалить румб
+      tags:
+      - Rumbs
+    get:
+      consumes:
+      - application/json
+      description: Возвращает детальную информацию о конкретном румбе
+      parameters:
+      - description: ID румба
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Информация о румбе
+          schema:
+            $ref: '#/definitions/ds.Rumb'
+        "400":
+          description: Неверный ID румба
+          schema:
+            type: object
+        "404":
+          description: Румб не найден
+          schema:
+            type: object
+      summary: Получить информацию о румбе по ID
+      tags:
+      - Rumbs
+    put:
+      consumes:
+      - application/json
+      description: Обновляет информацию о существующем румбе
+      parameters:
+      - description: ID румба
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Новые данные румба
+        in: body
+        name: rumb
+        required: true
+        schema:
+          $ref: '#/definitions/ds.Rumb'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Обновленный румб
+          schema:
+            $ref: '#/definitions/ds.Rumb'
+        "400":
+          description: Неверные данные запроса
+          schema:
+            type: object
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            type: object
+      summary: Обновить информацию о румбе
+      tags:
+      - Rumbs
+  /api/rumbs/{id}/image:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Загружает изображение для указанного румба в MinIO
+      parameters:
+      - description: ID румба
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Изображение для загрузки
+        in: formData
+        name: image
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Информация об обновленном румбе
+          schema:
+            type: object
+        "400":
+          description: Неверные данные запроса
+          schema:
+            type: object
+        "404":
+          description: Румб не найден
+          schema:
+            type: object
+        "500":
+          description: Ошибка загрузки изображения
+          schema:
+            type: object
+      summary: Загрузить изображение для румба
+      tags:
+      - Rumbs
+  /api/rumbs/addToRequest/{id}:
+    post:
+      consumes:
+      - application/json
+      description: Добавляет указанный румб в активную заявку или создает новую заявку
+      parameters:
+      - description: ID румба для добавления
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: Перенаправление на главную страницу
+        "400":
+          description: Неверный ID румба
+          schema:
+            type: object
+        "404":
+          description: Румб не найден
+          schema:
+            type: object
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            type: object
+      summary: Добавить румб в заявку
+      tags:
+      - FlyRequests
+  /fly_calculation/{id}:
+    get:
+      consumes:
+      - text/html
+      description: Отображает HTML страницу с детальной информацией о заявке на полет
+      parameters:
+      - description: ID заявки на полет
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML страница заявки
+          schema:
+            type: string
+        "400":
+          description: Неверный ID заявки
+          schema:
+            type: string
+        "404":
+          description: Заявка не найдена
+          schema:
+            type: string
+      summary: Получить страницу заявки на полет
+      tags:
+      - Frontend
+  /rumb/{id}:
+    get:
+      consumes:
+      - text/html
+      description: Отображает HTML страницу с детальной информацией о конкретном румбе
+      parameters:
+      - description: ID румба
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: HTML страница румба
+          schema:
+            type: string
+        "400":
+          description: Неверный ID румба
+          schema:
+            type: string
+        "404":
+          description: Румб не найден
+          schema:
+            type: string
+      summary: Страница детальной информации о румбе
+      tags:
+      - Frontend
+schemes:
+- http
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

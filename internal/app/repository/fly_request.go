@@ -16,7 +16,7 @@ type CurrentRequestInfo struct {
 func (r *Repository) GetCurrentRequestInfo(userID int) (CurrentRequestInfo, error) {
 	var info CurrentRequestInfo
 	var request ds.FlyRequest
-	err := r.db.Where("created_by_id = ? AND status = ?", userID, "created").
+	err := r.db.Where("created_by_id = ? AND status = ?", userID, "draft").
 		Order("created_at DESC").
 		First(&request).Error
 	if err == gorm.ErrRecordNotFound {
@@ -36,9 +36,32 @@ func (r *Repository) GetCurrentRequestInfo(userID int) (CurrentRequestInfo, erro
 	return CurrentRequestInfo{request.ID, int(count)}, nil
 }
 
-func (r *Repository) GetFlyRequests() ([]ds.FlyRequest, error) {
+// func (r *Repository) GetFlyRequests() ([]ds.FlyRequest, error) {
+// 	var reqs []ds.FlyRequest
+// 	err := r.db.Find(&reqs).Error
+// 	return reqs, err
+// }
+
+func (r *Repository) GetFlyRequests(status, formedAfter, formedBefore string) ([]ds.FlyRequest, error) {
 	var reqs []ds.FlyRequest
-	err := r.db.Find(&reqs).Error
+
+	db := r.db.Model(&ds.FlyRequest{}).
+		Where("status NOT IN ?", []string{"deleted", "draft"})
+
+	// Фильтр по статусу, если передан
+	if status != "" {
+		db = db.Where("status = ?", status)
+	}
+
+	// Фильтр по FormedAt
+	if formedAfter != "" {
+		db = db.Where("formed_at >= ?", formedAfter)
+	}
+	if formedBefore != "" {
+		db = db.Where("formed_at <= ?", formedBefore)
+	}
+
+	err := db.Order("id ASC").Find(&reqs).Error
 	return reqs, err
 }
 
@@ -66,7 +89,6 @@ func (r *Repository) DeleteFlyRequest(id int) error {
 	}
 	return nil
 }
-
 
 // AddRumbToRequest — добавляет румб к заявке (fly_request_rumbs)
 func (r *Repository) AddRumbToRequest(requestID, rumbID int) error {
@@ -153,4 +175,53 @@ func (r *Repository) UpdateFlyRequestRumb(flyRequestID, rumbID uint, distanceKM,
 			"distance_km":    distanceKM,
 			"wind_speed_kmh": windSpeedKMH,
 		}).Error
+}
+
+func (r *Repository) GetByIDWithRumbs(id uint) (*ds.FlyRequest, []ds.FlyRequest_Rumb, error) {
+	var req ds.FlyRequest
+	if err := r.db.First(&req, id).Error; err != nil {
+		return nil, nil, err
+	}
+
+	var rumbs []ds.FlyRequest_Rumb
+	if err := r.db.Where("fly_request_id = ?", id).Find(&rumbs).Error; err != nil {
+		return nil, nil, err
+	}
+
+	return &req, rumbs, nil
+}
+
+// Обновление статуса заявки, с опциональным moderatorID
+func (r *Repository) UpdateStatus(id uint, status string, moderatorID *int) error {
+	updates := map[string]interface{}{"status": status}
+	if moderatorID != nil {
+		updates["moderator_id"] = *moderatorID
+	}
+	result := r.db.Model(&ds.FlyRequest{}).Where("id = ?", id).Updates(updates)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return errors.New("request not found")
+	}
+	return nil
+}
+
+func (r *Repository) GetDraftByUser(userID int) (*ds.FlyRequest, int64, error) {
+    var fr ds.FlyRequest
+    // Ищем черновик
+    if err := r.db.Where("created_by_id = ? AND status = ?", userID, "draft").First(&fr).Error; err != nil {
+        if err == gorm.ErrRecordNotFound {
+            return nil, 0, nil
+        }
+        return nil, 0, err
+    }
+
+    // Считаем количество услуг в заявке
+    var count int64
+    if err := r.db.Model(&ds.FlyRequest_Rumb{}).Where("fly_request_id = ?", fr.ID).Count(&count).Error; err != nil {
+        return nil, 0, err
+    }
+
+    return &fr, count, nil
 }

@@ -41,8 +41,8 @@
             <div class='main__cards'>
                 {{ range .rumbs }}
                 <div class='main__card'>
-                    <img class='main__card__img' src="http://localhost:9000/rumbs/{{ .Image }}" alt="main__card__img">
-                    <h1>{{ .Title }}</h1>
+                    <img class='main__card__img' src="http://localhost:9000/rumbs/{{ .Rumb.Image }}" alt="main__card__img">
+                    <h1>{{ .Rumb.Title }}</h1>
                     <div class='main_info main__distance__info'>
                         <input class='main_input main__distance_input' placeholder='Введите дистанцию' type="text"
                             name="windDistance" id="windDistance" value='50' />

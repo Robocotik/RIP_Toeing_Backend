@@ -22,13 +22,12 @@ func (h *Handler) GetFlyRequestPage(ctx *gin.Context) {
 		logrus.Error(err)
 	}
 
-
 	// Если заявка в статусе deleted — перекидываем на /
 	if fly_request.Status == "deleted" {
 		ctx.Redirect(http.StatusFound, "/")
 		return
 	}
-	
+
 	requestInfo, err := h.Repository.GetCurrentRequestInfo(1)
 	if err != nil {
 		logrus.Error("Failed to get current request info:", err)
@@ -39,7 +38,7 @@ func (h *Handler) GetFlyRequestPage(ctx *gin.Context) {
 	}
 
 	rumbs, err := h.Repository.GetRumbsByFlyRequestID(requestInfo.RequestID)
-	
+
 	if err != nil {
 		logrus.Error("Failed to get rumbs from request: ", err)
 	}
@@ -56,12 +55,30 @@ func (h *Handler) GetFlyRequestPage(ctx *gin.Context) {
 // === API для FlyRequest ===
 
 func (h *Handler) GetFlyRequestsAPI(ctx *gin.Context) {
-	reqs, err := h.Repository.GetFlyRequests()
+	// Читаем query-параметры
+	status := ctx.Query("status")             // статус для фильтрации, если передан
+	formedAfter := ctx.Query("formedAfter")   // фильтр по FormedAt >= переданной дате
+	formedBefore := ctx.Query("formedBefore") // фильтр по FormedAt <= переданной дате
+
+	reqs, err := h.Repository.GetFlyRequests(status, formedAfter, formedBefore)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(http.StatusOK, reqs)
+
+	// Формируем массив для отдачи, исключая ModeratorID и CreatedByID
+	resp := make([]gin.H, 0, len(reqs))
+	for _, r := range reqs {
+		resp = append(resp, gin.H{
+			"ID":           r.ID,
+			"Status":       r.Status,
+			"CreatedAt":    r.CreatedAt,
+			"FormedAt":     r.FormedAt,
+			"CalculatedBy": r.CalculatedBy,
+		})
+	}
+
+	ctx.JSON(http.StatusOK, resp)
 }
 
 func (h *Handler) GetFlyRequestAPI(ctx *gin.Context) {
@@ -106,15 +123,16 @@ func (h *Handler) GetFlyRequestAPI(ctx *gin.Context) {
 }
 
 func (h *Handler) CreateFlyRequest(ctx *gin.Context) {
-	var req ds.FlyRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON"})
-		return
+	req := ds.FlyRequest{
+		Status:      "draft",
+		CreatedByID: 1,
 	}
+
 	if err := h.Repository.CreateFlyRequest(&req); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
 	ctx.JSON(http.StatusCreated, req)
 }
 
@@ -143,10 +161,9 @@ func (h *Handler) DeleteFlyRequest(ctx *gin.Context) {
 }
 
 func (h *Handler) AddToRequest(ctx *gin.Context) {
-	idStr := ctx.Param("id") // <-- id из пути /addToRequest/:id
+	idStr := ctx.Param("id") // id румба
 	rumbID, err := strconv.Atoi(idStr)
 	if err != nil {
-		logrus.Error("Invalid ID parameter:", err)
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid rumb id"})
 		return
 	}
@@ -154,36 +171,31 @@ func (h *Handler) AddToRequest(ctx *gin.Context) {
 	// Проверяем, что румб существует
 	_, err = h.Repository.GetRumbByID(rumbID)
 	if err != nil {
-		logrus.Error("Rumb not found:", err)
 		ctx.JSON(http.StatusNotFound, gin.H{"error": "Rumb not found"})
 		return
 	}
 
-	// Получаем или создаём активную заявку
-	flyRequest, err := h.Repository.GetFlyRequestByStatus("created")
-	if err != nil {
-		newFlyRequest := &ds.FlyRequest{
-			Status:      "created",
-			CreatedByID: 1,
-			ModeratorID: 1,
-		}
-		if err := h.Repository.CreateFlyRequest(newFlyRequest); err != nil {
-			logrus.Error("Failed to create fly request:", err)
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create request"})
+	// Получаем активную заявку draft
+	flyRequest, err := h.Repository.GetFlyRequestByStatus("draft")
+	if err != nil || flyRequest.ID == 0 {
+		// Если заявки нет — создаём через CreateFlyRequest
+		h.CreateFlyRequest(ctx)
+		// Получаем только что созданную заявку
+		flyRequest, err = h.Repository.GetFlyRequestByStatus("draft")
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch newly created request"})
 			return
 		}
-		flyRequest = *newFlyRequest
 	}
 
 	// Находим максимальный SegmentOrder
 	maxSegmentOrder, err := h.Repository.GetMaxSegmentOrder(flyRequest.ID)
 	if err != nil {
-		logrus.Error("Failed to get max segment order:", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to process request"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get max segment order"})
 		return
 	}
 
-	// Добавляем связь FlyRequest_Rumb
+	// Добавляем румб в заявку
 	flyRequestRumb := ds.FlyRequest_Rumb{
 		FlyRequestID: uint(flyRequest.ID),
 		RumbID:       uint(rumbID),
@@ -194,8 +206,7 @@ func (h *Handler) AddToRequest(ctx *gin.Context) {
 	}
 
 	if err := h.Repository.CreateFlyRequestRumb(flyRequestRumb); err != nil {
-		logrus.Error("Failed to create fly request rumb link:", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add to request"})
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to add rumb to request"})
 		return
 	}
 
@@ -260,30 +271,126 @@ func (h *Handler) UpdateFlyRequestRumb(ctx *gin.Context) {
 	})
 }
 
-// func (h *Handler) DeleteFlyRequest(ctx *gin.Context) {
-// 	idStr := ctx.Param("id")
-// 	flyRequestID, err := strconv.Atoi(idStr)
-// 	if err != nil {
-// 		logrus.Error("Invalid ID parameter:", err)
-// 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
-// 		return
-// 	}
+func (h *Handler) UpdateFlyRequestCalculatedBy(ctx *gin.Context) {
+	// Получаем ID заявки
+	id, err := strconv.Atoi(ctx.Param("id"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid fly request id"})
+		return
+	}
 
-	
-// 	_, err = h.Repository.GetFlyRequestByID(flyRequestID)
-// 	if err != nil {
-// 		logrus.Error("FlyRequest not found:", err)
-// 		ctx.JSON(http.StatusNotFound, gin.H{"error": "FlyRequest not found"})
-// 		return
-// 	}
+	// Парсим тело запроса
+	var input struct {
+		CalculatedBy string `json:"calculated_by"`
+	}
+	if err := ctx.ShouldBindJSON(&input); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
 
-	
-// 	err = h.Repository.UpdateFlyRequestStatus(flyRequestID, "deleted")
-// 	if err != nil {
-// 		logrus.Error("Failed to update fly request status:", err)
-// 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete request"})
-// 		return
-// 	}
+	// Получаем заявку
+	req, err := h.Repository.GetFlyRequestByID(id)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": "fly request not found"})
+		return
+	}
 
-// 	ctx.Redirect(http.StatusFound, "/")
-// }
+	// Обновляем поле CalculatedBy
+	req.CalculatedBy = input.CalculatedBy
+	if err := h.Repository.UpdateFlyRequest(req); err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update fly request"})
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"id":            req.ID,
+		"calculated_by": req.CalculatedBy,
+	})
+}
+
+func (h *Handler) FormRequest(c *gin.Context) {
+	id, _ := strconv.Atoi(c.Param("id"))
+	_, rumbs, err := h.Repository.GetByIDWithRumbs(uint(id))
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Request not found"})
+		return
+	}
+
+	// Проверяем каждый сегмент
+	for _, seg := range rumbs {
+		if seg.DistanceKM == 0 || seg.WindSpeedKMH == 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "All segments must have DistanceKM and WindSpeedKMH"})
+			return
+		}
+	}
+
+
+	if err := h.Repository.UpdateStatus(uint(id), "formed", nil); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update status"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Request formed successfully"})
+}
+
+
+func (h *Handler) FinishRequest(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request ID"})
+		return
+	}
+
+	var body struct {
+		Action      string `json:"action"`      // "complete" или "reject"
+		ModeratorID int    `json:"moderatorID"` // ID модератора
+	}
+
+	if err := c.ShouldBindJSON(&body); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON body"})
+		return
+	}
+
+	var newStatus string
+	switch body.Action {
+	case "complete":
+		newStatus = "finished"
+	case "reject":
+		newStatus = "rejected"
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid action, must be 'complete' or 'reject'"})
+		return
+	}
+
+	if err := h.Repository.UpdateStatus(uint(id), newStatus, &body.ModeratorID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update request status"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":     "Request status updated successfully",
+		"new_status":  newStatus,
+		"moderatorID": body.ModeratorID,
+	})
+}
+
+
+func (h *Handler) GetCurrentFlyRequest(c *gin.Context) {
+    userID := 1 // жестко для примера, обычно берется из контекста
+
+    fr, count, err := h.Repository.GetDraftByUser(userID)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch fly request"})
+        return
+    }
+
+    if fr == nil {
+        c.JSON(http.StatusOK, gin.H{"flyRequestID": nil, "rumbsCount": 0})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+        "flyRequestID":  fr.ID,
+        "rumbsCount": count,
+    })
+}

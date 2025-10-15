@@ -36,6 +36,7 @@ func (h *Handler) RegisterRoutes(router *gin.Engine) {
 		api.DELETE("/rumbs/:id", h.DeleteRumb)
 		api.POST("/rumbs/addToRequest/:id", h.AddToRequest)
 		api.POST("/rumbs/:id/image", h.UploadRumbImage)
+		
 
 		// Fly Requests
 		api.GET("/flyRequests", h.GetFlyRequestsAPI)
@@ -43,6 +44,10 @@ func (h *Handler) RegisterRoutes(router *gin.Engine) {
 		api.POST("/flyRequests", h.CreateFlyRequest)
 		api.PUT("/flyRequests/:id", h.UpdateFlyRequest)
 		api.DELETE("/flyRequests/:id", h.DeleteFlyRequest)
+		api.PUT("/flyRequests/:id/calculatedBy", h.UpdateFlyRequestCalculatedBy)
+		api.PUT("/flyRequests/:id/form", h.FormRequest)
+		api.PUT("/flyRequests/:id/finish", h.FinishRequest)
+		api.GET("/flyRequests/current", h.GetCurrentFlyRequest)
 
 		// Fly Request Rumbs
 		api.DELETE("/flyRequests/rumbs/:flyRequestID/:rumbID", h.DeleteFlyRequestRumb)

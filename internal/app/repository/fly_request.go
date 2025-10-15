@@ -38,8 +38,33 @@ func (r *Repository) GetCurrentRequestInfo(userID int) (CurrentRequestInfo, erro
 	return CurrentRequestInfo{request.ID, int(count)}, nil
 }
 
+// GetFlyRequestsByUser возвращает заявки конкретного пользователя с фильтрацией
+func (r *Repository) GetFlyRequestsByUser(userID int, status, formedAfter, formedBefore string) ([]ds.FlyRequest, error) {
+	var reqs []ds.FlyRequest
+
+	db := r.db.Model(&ds.FlyRequest{}).
+		Where("created_by_id = ? AND status NOT IN ?", userID, []string{"deleted", "draft"})
+
+	// Фильтр по статусу, если передан
+	if status != "" {
+		db = db.Where("status = ?", status)
+	}
+
+	// Фильтр по FormedAt
+	if formedAfter != "" {
+		db = db.Where("formed_at >= ?", formedAfter)
+	}
+	if formedBefore != "" {
+		db = db.Where("formed_at <= ?", formedBefore)
+	}
+
+	err := db.Order("id ASC").Find(&reqs).Error
+	return reqs, err
+}
+
 // GetFlyRequests возвращает список заявок на полет с фильтрацией
 
+// GetFlyRequests возвращает все заявки (для модераторов) с фильтрацией
 func (r *Repository) GetFlyRequests(status, formedAfter, formedBefore string) ([]ds.FlyRequest, error) {
 	var reqs []ds.FlyRequest
 

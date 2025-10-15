@@ -1,2 +1,6 @@
 ServiceHost = "0.0.0.0"
 ServicePort = 8080
+
+[JWT]
+Token = "your-super-secret-jwt-key-for-flight-api"
+ExpiresIn = "24h"

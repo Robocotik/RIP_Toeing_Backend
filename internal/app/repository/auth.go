@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -19,35 +18,41 @@ func (r *Repository) RegisterUser(user *ds.User) error {
 		return err
 	}
 
-	// Хешируем пароль
-	hashed, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-	user.Password = string(hashed)
+	fmt.Printf("Registering user: %s, password: %s\n", user.Login, user.Password)
 
-	// Сохраняем пользователя
+	// Сохраняем пользователя БЕЗ хеширования пароля
 	if err := r.db.Create(user).Error; err != nil {
+		fmt.Printf("Error creating user: %v\n", err)
 		return err
 	}
+
+	fmt.Printf("User registered successfully: %s, ID: %d\n", user.Login, user.ID)
 	return nil
 }
 
-// AuthenticateUser ищет пользователя по логину и сверяет пароль
+// AuthenticateUser аутентифицирует пользователя по логину и паролю
 func (r *Repository) AuthenticateUser(login, password string) (*ds.User, error) {
+	fmt.Printf("Authenticating user: %s, password: %s\n", login, password)
+	
 	var user ds.User
 	if err := r.db.Where("login = ?", login).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
+			fmt.Printf("User not found in database: %s\n", login)
 			return nil, errors.New("invalid credentials")
 		}
+		fmt.Printf("Database error: %v\n", err)
 		return nil, err
 	}
 
-	// Сравниваем хеш пароля
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+	fmt.Printf("Found user: %s, ID: %d, password in DB: %s\n", user.Login, user.ID, user.Password)
+
+	// Прямое сравнение паролей БЕЗ хеширования
+	if user.Password != password {
+		fmt.Printf("Password mismatch: expected %s, got %s\n", user.Password, password)
 		return nil, errors.New("invalid credentials")
 	}
 
+	fmt.Printf("Authentication successful for user: %s\n", user.Login)
 	return &user, nil
 }
 
@@ -62,18 +67,9 @@ func (r *Repository) GetUserByID(id int) (ds.User, error) {
 
 // UpdateUser обновляет данные пользователя
 func (r *Repository) UpdateUser(user *ds.User) error {
-	// Если пароль передан — хэшируем
-	if user.Password != "" {
-		hash, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-		if err != nil {
-			return fmt.Errorf("failed to hash password: %v", err)
-		}
-		user.Password = string(hash)
-	}
-
 	return r.db.Model(&ds.User{}).Where("id = ?", user.ID).
 		Updates(map[string]interface{}{
 			"login":    user.Login,
-			"password": user.Password,
+			"password": user.Password, // Без хеширования
 		}).Error
 }

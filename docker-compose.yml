@@ -1,4 +1,4 @@
-version: '3.7'
+version: "3.7"
 
 # Общие настройки для MinIO
 x-minio-common: &minio-common
@@ -8,10 +8,10 @@ x-minio-common: &minio-common
     MINIO_ACCESS_KEY: admin
     MINIO_SECRET_KEY: admin12345
   expose:
-    - '9000'
-    - '9001'
+    - "9000"
+    - "9001"
   healthcheck:
-    test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
+    test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
     interval: 30s
     timeout: 20s
     retries: 3
@@ -69,13 +69,20 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
-      - '9000:9000'
-      - '9001:9001'
+      - "9000:9000"
+      - "9001:9001"
     depends_on:
       - minio1
       - minio2
       - minio3
       - minio4
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
 
 # ✅ Все тома
 volumes:
@@ -88,3 +95,4 @@ volumes:
   data3-2:
   data4-1:
   data4-2:
+  redis_data:

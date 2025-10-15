@@ -67,29 +67,41 @@ func (h *Handler) GetFlyRequestPage(ctx *gin.Context) {
 
 // GetFlyRequestsAPI godoc
 // @Summary Получить список заявок на полет
-// @Description Возвращает список заявок на полет с возможностью фильтрации по статусу и датам
+// @Description Возвращает список заявок с фильтрацией. Пользователи видят только свои заявки, модераторы - все.
 // @Tags FlyRequests
 // @Accept json
 // @Produce json
-// @Param status query string false "Фильтр по статусу (draft, formed, finished, rejected)"
-// @Param formedAfter query string false "Фильтр по дате формирования (>=) в формате YYYY-MM-DD"
-// @Param formedBefore query string false "Фильтр по дате формирования (<=) в формате YYYY-MM-DD"
+// @Param status query string false "Фильтр по статусу"
+// @Param formedAfter query string false "Фильтр по дате формирования после"
+// @Param formedBefore query string false "Фильтр по дате формирования до"
+// @Security BearerAuth
 // @Success 200 {array} object "Список заявок"
 // @Failure 500 {object} object "Внутренняя ошибка сервера"
-// @Router /api/flyRequests [get]
+// @Router /flyRequests [get]
 func (h *Handler) GetFlyRequestsAPI(ctx *gin.Context) {
-	// Читаем query-параметры
-	status := ctx.Query("status")             // статус для фильтрации, если передан
-	formedAfter := ctx.Query("formedAfter")   // фильтр по FormedAt >= переданной дате
-	formedBefore := ctx.Query("formedBefore") // фильтр по FormedAt <= переданной дате
+	userID, _ := ctx.Get("userID")
+	isModerator, _ := ctx.Get("isModerator")
 
-	reqs, err := h.Repository.GetFlyRequests(status, formedAfter, formedBefore)
+	status := ctx.Query("status")
+	formedAfter := ctx.Query("formedAfter")
+	formedBefore := ctx.Query("formedBefore")
+
+	var reqs []ds.FlyRequest
+	var err error
+
+	// Модераторы видят все заявки, обычные пользователи - только свои
+	if isModerator.(bool) {
+		reqs, err = h.Repository.GetFlyRequests(status, formedAfter, formedBefore)
+	} else {
+		reqs, err = h.Repository.GetFlyRequestsByUser(userID.(int), status, formedAfter, formedBefore)
+	}
+
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Формируем массив для отдачи, исключая ModeratorID и CreatedByID
+	// Формируем ответ
 	resp := make([]gin.H, 0, len(reqs))
 	for _, r := range reqs {
 		resp = append(resp, gin.H{
@@ -98,6 +110,7 @@ func (h *Handler) GetFlyRequestsAPI(ctx *gin.Context) {
 			"CreatedAt":    r.CreatedAt,
 			"FormedAt":     r.FormedAt,
 			"CalculatedBy": r.CalculatedBy,
+			"CreatedByID":  r.CreatedByID,
 		})
 	}
 
@@ -114,7 +127,7 @@ func (h *Handler) GetFlyRequestsAPI(ctx *gin.Context) {
 // @Success 200 {object} object "Детальная информация о заявке"
 // @Failure 400 {object} object "Неверный ID заявки"
 // @Failure 404 {object} object "Заявка не найдена"
-// @Router /api/flyRequests/{id} [get]
+// @Router /flyRequests/{id} [get]
 func (h *Handler) GetFlyRequestAPI(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
@@ -158,17 +171,20 @@ func (h *Handler) GetFlyRequestAPI(ctx *gin.Context) {
 
 // CreateFlyRequest godoc
 // @Summary Создать новую заявку на полет
-// @Description Создает новую заявку на полет в статусе "draft"
+// @Description Создает новую заявку на полет для текущего пользователя
 // @Tags FlyRequests
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Success 201 {object} ds.FlyRequest "Созданная заявка"
 // @Failure 500 {object} object "Внутренняя ошибка сервера"
-// @Router /api/flyRequests [post]
+// @Router /flyRequests [post]
 func (h *Handler) CreateFlyRequest(ctx *gin.Context) {
+	userID, _ := ctx.Get("userID")
+
 	req := ds.FlyRequest{
 		Status:      "draft",
-		CreatedByID: 1,
+		CreatedByID: userID.(int),
 	}
 
 	if err := h.Repository.CreateFlyRequest(&req); err != nil {
@@ -190,7 +206,7 @@ func (h *Handler) CreateFlyRequest(ctx *gin.Context) {
 // @Success 200 {object} ds.FlyRequest "Обновленная заявка"
 // @Failure 400 {object} object "Неверные данные запроса"
 // @Failure 500 {object} object "Внутренняя ошибка сервера"
-// @Router /api/flyRequests/{id} [put]
+// @Router /flyRequests/{id} [put]
 func (h *Handler) UpdateFlyRequest(ctx *gin.Context) {
 	id, _ := strconv.Atoi(ctx.Param("id"))
 	var req ds.FlyRequest
@@ -215,7 +231,7 @@ func (h *Handler) UpdateFlyRequest(ctx *gin.Context) {
 // @Param id path int true "ID заявки на полет"
 // @Success 302 "Перенаправление на главную страницу"
 // @Failure 500 {object} object "Внутренняя ошибка сервера"
-// @Router /api/flyRequests/{id} [delete]
+// @Router /flyRequests/{id} [delete]
 func (h *Handler) DeleteFlyRequest(ctx *gin.Context) {
 	id, _ := strconv.Atoi(ctx.Param("id"))
 	if err := h.Repository.DeleteFlyRequest(id); err != nil {
@@ -236,7 +252,7 @@ func (h *Handler) DeleteFlyRequest(ctx *gin.Context) {
 // @Failure 400 {object} object "Неверный ID румба"
 // @Failure 404 {object} object "Румб не найден"
 // @Failure 500 {object} object "Внутренняя ошибка сервера"
-// @Router /api/rumbs/addToRequest/{id} [post]
+// @Router /rumbs/addToRequest/{id} [post]
 func (h *Handler) AddToRequest(ctx *gin.Context) {
 	idStr := ctx.Param("id") // id румба
 	rumbID, err := strconv.Atoi(idStr)
@@ -301,7 +317,7 @@ func (h *Handler) AddToRequest(ctx *gin.Context) {
 // @Success 200 {object} object "Сообщение об успешном удалении"
 // @Failure 400 {object} object "Неверные ID"
 // @Failure 500 {object} object "Внутренняя ошибка сервера"
-// @Router /api/flyRequests/rumbs/{flyRequestID}/{rumbID} [delete]
+// @Router /flyRequests/rumbs/{flyRequestID}/{rumbID} [delete]
 func (h *Handler) DeleteFlyRequestRumb(ctx *gin.Context) {
 	flyRequestID, err := strconv.Atoi(ctx.Param("flyRequestID"))
 	if err != nil {
@@ -336,7 +352,7 @@ func (h *Handler) DeleteFlyRequestRumb(ctx *gin.Context) {
 // @Success 200 {object} object "Обновленные данные"
 // @Failure 400 {object} object "Неверные данные запроса"
 // @Failure 500 {object} object "Внутренняя ошибка сервера"
-// @Router /api/flyRequests/rumbs/{flyRequestID}/{rumbID} [put]
+// @Router /flyRequests/rumbs/{flyRequestID}/{rumbID} [put]
 func (h *Handler) UpdateFlyRequestRumb(ctx *gin.Context) {
 	flyRequestID, err := strconv.Atoi(ctx.Param("flyRequestID"))
 	if err != nil {
@@ -385,7 +401,7 @@ func (h *Handler) UpdateFlyRequestRumb(ctx *gin.Context) {
 // @Failure 400 {object} object "Неверные данные запроса"
 // @Failure 404 {object} object "Заявка не найдена"
 // @Failure 500 {object} object "Внутренняя ошибка сервера"
-// @Router /api/flyRequests/{id}/calculatedBy [put]
+// @Router /flyRequests/{id}/calculatedBy [put]
 func (h *Handler) UpdateFlyRequestCalculatedBy(ctx *gin.Context) {
 	// Получаем ID заявки
 	id, err := strconv.Atoi(ctx.Param("id"))
@@ -434,7 +450,7 @@ func (h *Handler) UpdateFlyRequestCalculatedBy(ctx *gin.Context) {
 // @Failure 400 {object} object "Не все сегменты заполнены"
 // @Failure 404 {object} object "Заявка не найдена"
 // @Failure 500 {object} object "Внутренняя ошибка сервера"
-// @Router /api/flyRequests/{id}/form [put]
+// @Router /flyRequests/{id}/form [put]
 func (h *Handler) FormRequest(c *gin.Context) {
 	id, _ := strconv.Atoi(c.Param("id"))
 	_, rumbs, err := h.Repository.GetByIDWithRumbs(uint(id))
@@ -451,7 +467,6 @@ func (h *Handler) FormRequest(c *gin.Context) {
 		}
 	}
 
-
 	if err := h.Repository.UpdateStatus(uint(id), "formed", nil); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update status"})
 		return
@@ -462,26 +477,37 @@ func (h *Handler) FormRequest(c *gin.Context) {
 
 // FinishRequest godoc
 // @Summary Завершить или отклонить заявку
-// @Description Переводит заявку в статус "finished" или "rejected" с указанием модератора
+// @Description Переводит заявку в статус "finished" или "rejected". Только для модераторов.
 // @Tags FlyRequests
 // @Accept json
 // @Produce json
 // @Param id path int true "ID заявки на полет"
-// @Param request body object true "Данные для завершения" { "action": "complete", "moderatorID": 456 }
+// @Param request body object true "Данные для завершения"
+// @Security BearerAuth
 // @Success 200 {object} object "Результат операции"
 // @Failure 400 {object} object "Неверные данные запроса"
+// @Failure 403 {object} object "Доступ запрещен"
 // @Failure 500 {object} object "Внутренняя ошибка сервера"
-// @Router /api/flyRequests/{id}/finish [put]
+// @Router /flyRequests/{id}/finish [put]
 func (h *Handler) FinishRequest(c *gin.Context) {
+	// Проверяем что пользователь - модератор
+	isModerator, exists := c.Get("isModerator")
+	if !exists || !isModerator.(bool) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Moderator access required"})
+		return
+	}
+
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request ID"})
 		return
 	}
 
+	moderatorIDInterface, _ := c.Get("userID")
+	moderatorID := moderatorIDInterface.(int)
+
 	var body struct {
-		Action      string `json:"action"`      // "complete" или "reject"
-		ModeratorID int    `json:"moderatorID"` // ID модератора
+		Action string `json:"action"` // "complete" или "reject"
 	}
 
 	if err := c.ShouldBindJSON(&body); err != nil {
@@ -500,7 +526,8 @@ func (h *Handler) FinishRequest(c *gin.Context) {
 		return
 	}
 
-	if err := h.Repository.UpdateStatus(uint(id), newStatus, &body.ModeratorID); err != nil {
+	// Передаем указатель на moderatorID
+	if err := h.Repository.UpdateStatus(uint(id), newStatus, &moderatorID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update request status"})
 		return
 	}
@@ -508,7 +535,7 @@ func (h *Handler) FinishRequest(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message":     "Request status updated successfully",
 		"new_status":  newStatus,
-		"moderatorID": body.ModeratorID,
+		"moderatorID": moderatorID,
 	})
 }
 
@@ -520,23 +547,23 @@ func (h *Handler) FinishRequest(c *gin.Context) {
 // @Produce json
 // @Success 200 {object} object "Информация о текущей заявке"
 // @Failure 500 {object} object "Внутренняя ошибка сервера"
-// @Router /api/flyRequests/current [get]
+// @Router /flyRequests/current [get]
 func (h *Handler) GetCurrentFlyRequest(c *gin.Context) {
-    userID := 1 // жестко для примера, обычно берется из контекста
+	userID := 1 // жестко для примера, обычно берется из контекста
 
-    fr, count, err := h.Repository.GetDraftByUser(userID)
-    if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch fly request"})
-        return
-    }
+	fr, count, err := h.Repository.GetDraftByUser(userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch fly request"})
+		return
+	}
 
-    if fr == nil {
-        c.JSON(http.StatusOK, gin.H{"flyRequestID": nil, "rumbsCount": 0})
-        return
-    }
+	if fr == nil {
+		c.JSON(http.StatusOK, gin.H{"flyRequestID": nil, "rumbsCount": 0})
+		return
+	}
 
-    c.JSON(http.StatusOK, gin.H{
-        "flyRequestID":  fr.ID,
-        "rumbsCount": count,
-    })
+	c.JSON(http.StatusOK, gin.H{
+		"flyRequestID": fr.ID,
+		"rumbsCount":   count,
+	})
 }

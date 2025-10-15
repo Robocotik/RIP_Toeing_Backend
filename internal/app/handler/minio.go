@@ -19,7 +19,7 @@ import (
 // @Failure 400 {object} object "Неверные данные запроса"
 // @Failure 404 {object} object "Румб не найден"
 // @Failure 500 {object} object "Ошибка загрузки изображения"
-// @Router /api/rumbs/{id}/image [post]
+// @Router /rumbs/{id}/image [post]
 func (h *Handler) UploadRumbImage(ctx *gin.Context) {
 	// Получаем ID услуги из URL
 	idStr := ctx.Param("id")

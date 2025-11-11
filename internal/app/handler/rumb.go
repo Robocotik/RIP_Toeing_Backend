@@ -2,8 +2,8 @@ package handler
 
 import (
 	"backend/internal/app/ds"
-	"net/http"
 	"backend/internal/app/repository"
+	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -84,23 +84,33 @@ func (h *Handler) GetRumbPage(ctx *gin.Context) {
 	})
 }
 
-// === API для Rumb ===
-
 // GetRumbsAPI godoc
 // @Summary Получить список всех румбов
-// @Description Возвращает JSON массив всех румбов в системе
+// @Description Возвращает JSON массив всех румбов в системе с возможностью фильтрации по названию
 // @Tags Rumbs
 // @Accept json
 // @Produce json
+// @Param query query string false "Поисковый запрос для фильтрации румбов по названию"
 // @Success 200 {array} ds.Rumb "Список румбов"
 // @Failure 500 {object} object "Внутренняя ошибка сервера"
 // @Router /api/rumbs [get]
 func (h *Handler) GetRumbsAPI(ctx *gin.Context) {
-	rumbs, err := h.Repository.GetRumbs()
+	var rumbs []ds.Rumb
+	var err error
+
+	searchQuery := ctx.Query("query")
+	if searchQuery == "" {
+		rumbs, err = h.Repository.GetRumbs()
+	} else {
+		rumbs, err = h.Repository.GetRumbsByTitle(searchQuery)
+	}
+
 	if err != nil {
+		logrus.Error(err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
 	ctx.JSON(http.StatusOK, rumbs)
 }
 

@@ -11,6 +11,7 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis/v8"
 	"github.com/sirupsen/logrus"
 
 	_ "backend/docs" // Swagger docs
@@ -67,6 +68,12 @@ func main() {
 		logrus.Fatalf("error loading config: %v", err)
 	}
 
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "", // нет пароля
+		DB:       0,  // используем DB по умолчанию
+	})
+
 	postgresString := dsn.FromEnv()
 	fmt.Println(postgresString)
 
@@ -75,20 +82,20 @@ func main() {
 		logrus.Fatalf("error initializing repository: %v", errRep)
 	}
 
-	hand := handler.NewHandler(rep)
-
 	// Инициализация JWT сервиса из конфигурации
 	jwtService := service.NewJWTService(conf.JWT.Token, conf.JWT.ExpiresIn)
 
-	// Настройка маршрутов с аутентификацией
-	setupRoutes(router, hand, jwtService)
+	hand := handler.NewHandler(rep, jwtService, redisClient)
+
+	// Настройка маршрутов с аутентификацией (передаем redisClient)
+	setupRoutes(router, hand, jwtService, redisClient)
 
 	application := pkg.NewApp(conf, router, hand)
 	application.RunApp()
 }
 
 // Остальной код без изменений...
-func setupRoutes(router *gin.Engine, hand *handler.Handler, jwtService *service.JWTService) {
+func setupRoutes(router *gin.Engine, hand *handler.Handler, jwtService *service.JWTService, redisClient *redis.Client) {
 	// Загрузка HTML шаблонов и статических файлов
 	router.LoadHTMLGlob("templates/*")
 	router.Static("/styles", "resources/styles")
@@ -111,6 +118,7 @@ func setupRoutes(router *gin.Engine, hand *handler.Handler, jwtService *service.
 		{
 			public.POST("/auth/register", hand.RegisterUser)
 			public.POST("/auth/login", hand.LoginUser)
+			public.POST("/auth/logout", hand.LogoutUser) // ✅ Logout в публичных маршрутах
 			public.GET("/rumbs", hand.GetRumbsAPI)
 			public.GET("/rumbs/:id", hand.GetRumbAPI)
 			public.GET("/rumbs/addToRequest/:id", hand.AddToRequest)
@@ -118,15 +126,15 @@ func setupRoutes(router *gin.Engine, hand *handler.Handler, jwtService *service.
 
 		// Защищенные маршруты (требуют аутентификации)
 		protected := api.Group("")
-		protected.Use(middleware.AuthMiddleware(jwtService)) // <- JWT middleware применяется здесь
+		protected.Use(middleware.AuthMiddleware(jwtService, redisClient))
 		{
 			fmt.Println("Setting up protected routes with JWT middleware")
 
 			// Пользовательские endpoints
 			protected.GET("/auth/me", hand.GetCurrentUser)
-			protected.GET("/auth/validate", hand.ValidateToken) // Добавьте этот эндпоинт для тестирования
+			protected.GET("/auth/validate", hand.ValidateToken)
 			protected.PUT("/auth/me", hand.UpdateCurrentUser)
-			protected.POST("/auth/logout", hand.LogoutUser)
+			// ❌ УБРАТЬ отсюда: protected.POST("/auth/logout", hand.LogoutUser)
 
 			// Заявки пользователя
 			protected.GET("/flyRequests", hand.GetFlyRequestsAPI)
@@ -144,7 +152,7 @@ func setupRoutes(router *gin.Engine, hand *handler.Handler, jwtService *service.
 
 		// Маршруты только для модераторов
 		moderator := api.Group("")
-		moderator.Use(middleware.AuthMiddleware(jwtService))
+		moderator.Use(middleware.AuthMiddleware(jwtService, redisClient))
 		moderator.Use(middleware.RequireModerator())
 		{
 			// Управление румбами (CRUD)

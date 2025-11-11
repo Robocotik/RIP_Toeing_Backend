@@ -2,16 +2,24 @@ package handler
 
 import (
 	"backend/internal/app/repository"
+	"backend/internal/app/service"
 
+	"github.com/go-redis/redis/v8"
 	// "github.com/gin-gonic/gin"
 )
 
 type Handler struct {
 	Repository *repository.Repository
+	JWTService *service.JWTService
+	Redis      *redis.Client // Добавляем Redis клиент
 }
 
-func NewHandler(r *repository.Repository) *Handler {
-	return &Handler{Repository: r}
+func NewHandler(r *repository.Repository, jwtService *service.JWTService, redisClient *redis.Client) *Handler {
+	return &Handler{
+		Repository: r,
+		JWTService: jwtService,
+		Redis:      redisClient,
+	}
 }
 
 // func (h *Handler) RegisterRoutes(router *gin.Engine) {
@@ -36,7 +44,6 @@ func NewHandler(r *repository.Repository) *Handler {
 // 		api.DELETE("/rumbs/:id", h.DeleteRumb)
 // 		api.POST("/rumbs/addToRequest/:id", h.AddToRequest)
 // 		api.POST("/rumbs/:id/image", h.UploadRumbImage)
-		
 
 // 		// Fly Requests
 // 		api.GET("/flyRequests", h.GetFlyRequestsAPI)
@@ -62,5 +69,3 @@ func NewHandler(r *repository.Repository) *Handler {
 
 // 	}
 // }
-
-
